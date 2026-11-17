@@ -4,320 +4,593 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050b14">
-<title>Command Center</title>
+<title>Command Center — Preview v2</title>
+<!--HEAD-->
 <style>
 :root{
   color-scheme:dark;
-  --bg:#050b14; --panel:rgba(9,24,40,.72); --line:rgba(25,211,255,.22); --line-hi:rgba(25,211,255,.55);
-  --cyan:#19d3ff; --teal:#2ef2c8; --amber:#ffb020; --red:#ff4d5e; --violet:#8a7dff;
-  --ink:#d6f2ff; --mute:#6f93a8; --glow:0 0 18px rgba(25,211,255,.18);
-  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --bg:#050b14;--panel:rgba(9,24,40,.74);--line:rgba(25,211,255,.22);--line-hi:rgba(25,211,255,.55);
+  --cyan:#19d3ff;--teal:#2ef2c8;--amber:#ffb020;--red:#ff4d5e;--violet:#8a7dff;--green:#7dff9a;
+  --ink:#d6f2ff;--mute:#6f93a8;--glow:0 0 18px rgba(25,211,255,.18);--acc:var(--cyan);
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--mx:0;--my:0;
 }
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%}
-body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
-  background-image:
-    radial-gradient(1200px 600px at 50% -10%,rgba(25,211,255,.10),transparent 60%),
-    linear-gradient(rgba(25,211,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(25,211,255,.04) 1px,transparent 1px);
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden;
+  background-image:radial-gradient(1200px 600px at 50% -10%,rgba(25,211,255,.11),transparent 60%),
+  linear-gradient(rgba(25,211,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(25,211,255,.035) 1px,transparent 1px);
   background-size:auto,44px 44px,44px 44px;background-attachment:fixed}
-h1,h2,h3,p{margin:0}
-button,input,select,textarea{font:inherit;color:inherit}
-.shell{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
-/* sidebar */
-nav.side{border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:6px;background:rgba(5,11,20,.6);position:sticky;top:0;height:100vh}
-.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 16px;letter-spacing:.18em;font-size:12px;color:var(--cyan);text-transform:uppercase}
-.brand i{width:26px;height:26px;border-radius:50%;border:1px solid var(--cyan);display:grid;place-items:center;box-shadow:var(--glow)}
-.brand i::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
-nav.side a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--mute);text-decoration:none;font-size:13px;border:1px solid transparent}
-nav.side a:hover,nav.side a.on{color:var(--ink);background:rgba(25,211,255,.08);border-color:var(--line)}
-nav.side a b{margin-left:auto;font:600 11px var(--mono);color:var(--cyan)}
-.side .foot{margin-top:auto;font:11px var(--mono);color:var(--mute);padding:8px}
-/* main */
-main{padding:16px 20px 28px;min-width:0}
-.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-.chip{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:7px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);display:inline-flex;gap:8px;align-items:center}
+h1,h2,h3,p{margin:0}button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+/* alert strip: calm, one line, the rest of the theme is unchanged */
+#band{display:none;align-items:center;justify-content:center;gap:10px;padding:5px 12px;font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--red);
+  background:rgba(255,77,94,.10);border-bottom:1px solid rgba(255,77,94,.45)}
+body.alert #band{display:flex}
+body.alert .chip.sys .d{background:var(--red);box-shadow:0 0 8px var(--red);animation:blink 1s infinite}
+body.wait .chip.sys .d{background:var(--mute);box-shadow:none}
+/* top */
+.top{display:flex;align-items:center;gap:10px;padding:12px 20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;letter-spacing:.2em;font-size:12px;color:var(--acc);text-transform:uppercase;margin-right:8px}
+.brand i{width:26px;height:26px;border-radius:50%;border:1px solid var(--acc);display:grid;place-items:center;box-shadow:var(--glow)}
+.brand i::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--acc);box-shadow:0 0 10px var(--acc)}
+.chip{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:7px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);display:inline-flex;gap:8px;align-items:center;color:var(--ink)}
 .chip .d{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal)}
-.chip.warn .d{background:var(--amber);box-shadow:0 0 8px var(--amber)}
-.chip.demo{color:var(--amber);border-color:rgba(255,176,32,.45)}
+.chip.democ{color:var(--amber);border-color:rgba(255,176,32,.45)}
+.chip.btn:hover{border-color:var(--line-hi);background:rgba(25,211,255,.12)}
+.chip.on{border-color:var(--amber);color:var(--amber)}
 .clock{margin:0 auto;text-align:center}
-.clock .t{font:600 24px var(--mono);letter-spacing:.08em;color:var(--cyan);text-shadow:0 0 14px rgba(25,211,255,.5)}
+.clock .t{font:600 24px var(--mono);letter-spacing:.08em;color:var(--acc);text-shadow:0 0 14px currentColor}
 .clock .dt{font-size:11px;color:var(--mute);letter-spacing:.12em;text-transform:uppercase}
-.btn{cursor:pointer;border:1px solid var(--line-hi);background:rgba(25,211,255,.10);padding:8px 14px;border-radius:7px;font-size:13px}
-.btn:hover{background:rgba(25,211,255,.2)}
-.btn.ghost{border-color:var(--line);background:none;color:var(--mute)}
-/* grid */
-.grid{display:grid;gap:12px;grid-template-columns:repeat(12,1fr)}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;position:relative;backdrop-filter:blur(4px);min-width:0}
-.panel::before,.panel::after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--cyan);opacity:.7}
+kbd{font:600 10px var(--mono);border:1px solid var(--line-hi);border-radius:4px;padding:1px 5px;color:var(--mute)}
+/* wall */
+#wall{display:grid;grid-template-columns:1fr 1.55fr 1fr;gap:16px;padding:6px 20px 84px;perspective:1700px;max-width:1700px;margin:0 auto}
+.col{display:grid;gap:12px;align-content:start;min-width:0;transition:transform .25s ease-out;will-change:transform}
+#colL{transform:rotateY(calc(5deg + var(--mx)*1.2deg));transform-origin:right center}
+#colR{transform:rotateY(calc(-5deg + var(--mx)*1.2deg));transform-origin:left center}
+#colC{transform:translateY(calc(var(--my)*-2px))}
+/* panels */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;position:relative;backdrop-filter:blur(5px);min-width:0;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.panel::before,.panel::after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--acc);opacity:.75}
 .panel::before{top:-1px;left:-1px;border-right:0;border-bottom:0;border-radius:10px 0 0 0}
 .panel::after{bottom:-1px;right:-1px;border-left:0;border-top:0;border-radius:0 0 10px 0}
-.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.ph h2{font:600 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--cyan)}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.ph h2{font:600 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--acc)}
 .ph span{font:11px var(--mono);color:var(--mute)}
-.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.ph .badge{font:700 11px var(--mono);background:var(--acc);color:#02121c;border-radius:9px;padding:1px 8px}
+.empty{color:var(--mute);font-size:13px;padding:6px 2px}
+/* needs you */
+.need{display:grid;gap:8px}
+.nd{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:rgba(25,211,255,.04);transition:opacity .3s,transform .3s}
+.nd.gone{opacity:0;transform:translateX(24px)}
+.nd .t{font-weight:600;font-size:13px;overflow-wrap:anywhere}.nd .m{font:11px var(--mono);color:var(--mute);margin:2px 0 8px;overflow-wrap:anywhere}
+.nd .a{display:flex;gap:6px}
+.b{border:1px solid var(--line-hi);background:rgba(25,211,255,.10);border-radius:6px;padding:5px 12px;font-size:12px}
+.b:hover{background:rgba(25,211,255,.22)}.b:disabled{opacity:.5;cursor:wait}
+.b.ok{border-color:rgba(46,242,200,.6);color:var(--teal)}.b.no{border-color:rgba(255,77,94,.5);color:var(--red)}
+.b.big{padding:8px 16px;font-size:13px}
+/* roster */
+.ros{display:grid;gap:6px}
+.rb{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:7px 9px;background:rgba(25,211,255,.03)}
+.gl{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:rgba(25,211,255,.08);border:1px solid var(--line);position:relative;color:var(--c,var(--cyan))}
+.gl svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.gl.working{animation:glow 1.8s ease-in-out infinite}
+.gl.idle{animation:breathe 4s ease-in-out infinite}
+.gl.waiting{color:var(--mute);opacity:.6}
+.gl.silent{color:var(--red);border-color:var(--red);animation:blink 1s infinite}
+.rb .n{font-weight:600;font-size:13px}.rb .s{font:11px var(--mono);color:var(--mute);overflow-wrap:anywhere}
+.rb .k{font:700 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
+.rb .k.idle{color:var(--amber)}.rb .k.silent{color:var(--red)}.rb .k.waiting{color:var(--mute)}
+@keyframes glow{50%{box-shadow:0 0 16px var(--c,var(--cyan));background:rgba(25,211,255,.18)}}
+@keyframes breathe{50%{opacity:.65}}
+@keyframes blink{50%{opacity:.35}}
 /* core */
-.coreBox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding-top:18px;padding-bottom:16px}
-.core{position:relative;width:min(300px,70vw);aspect-ratio:1}
-.core .r{position:absolute;inset:0;border-radius:50%;border:1px solid transparent}
-.core .r1{border-top-color:var(--cyan);border-bottom-color:rgba(25,211,255,.25);animation:spin 18s linear infinite}
-.core .r2{inset:12%;border-left-color:var(--teal);border-right-color:rgba(46,242,200,.2);animation:spin 11s linear infinite reverse}
-.core .r3{inset:24%;border:1px dashed rgba(25,211,255,.4);animation:spin 40s linear infinite}
-.core .orb{position:absolute;inset:34%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#bff4ff,#19d3ff 35%,#0a5b86 70%,#06223a);box-shadow:0 0 50px rgba(25,211,255,.55),inset 0 0 25px rgba(0,0,0,.4);animation:pulse 3.6s ease-in-out infinite}
-.core.warn .orb{background:radial-gradient(circle at 35% 30%,#ffe7b0,#ffb020 35%,#8a5a00 70%,#2a1a00);box-shadow:0 0 50px rgba(255,176,32,.5),inset 0 0 25px rgba(0,0,0,.4)}
-.core .lbl{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font:700 10px var(--mono);letter-spacing:.14em;color:#031018;text-shadow:0 0 6px rgba(255,255,255,.4)}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pulse{50%{transform:scale(1.05);filter:brightness(1.15)}}
-.greet{text-align:center}
-.greet h1{font:600 18px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
-.greet p{color:var(--mute);margin-top:4px;max-width:46ch}
-.prio{width:100%;display:grid;gap:6px;margin-top:4px}
-.prio div{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(25,211,255,.04)}
-.prio b{font:700 12px var(--mono);color:var(--cyan)}
+.coreP{padding-bottom:8px}
+.cw{position:relative;width:100%}
+#orbit{width:100%;display:block}
+.tip{position:absolute;pointer-events:none;font:11px var(--mono);background:rgba(2,12,22,.92);border:1px solid var(--line-hi);border-radius:6px;padding:5px 8px;opacity:0;transition:opacity .15s;white-space:nowrap;z-index:3}
+.hello{text-align:center;margin-top:-2px}
+.hello h1{font:600 17px var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.hello p{color:var(--mute);margin-top:3px}
+/* right now */
+.rn{border:1px solid var(--line-hi);background:linear-gradient(135deg,rgba(25,211,255,.14),rgba(25,211,255,.03));border-radius:10px;padding:12px 14px}
+.rn .lb{font:700 10px var(--mono);letter-spacing:.2em;color:var(--acc);text-transform:uppercase}
+.rn .t{font-size:17px;font-weight:600;margin:4px 0;overflow-wrap:anywhere}
+.rn .cd{font:700 22px var(--mono);color:var(--amber);letter-spacing:.06em}
+.rn .cd:empty{display:none}
+.rn .a{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.rn .a:empty{display:none}
+.rn .sub{color:var(--mute);font-size:13px}
 /* feed */
-.feed{display:grid;gap:8px;max-height:430px;overflow:auto;padding-right:2px}
-.item{display:grid;grid-template-columns:22px 1fr auto;gap:8px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;background:rgba(25,211,255,.03)}
-.item .ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font:700 11px var(--mono);background:rgba(25,211,255,.14);color:var(--cyan)}
-.item.high .ic{background:rgba(255,176,32,.16);color:var(--amber)}
-.item.alert .ic{background:rgba(255,77,94,.16);color:var(--red)}
-.item .tt{font-weight:600;font-size:13px}
-.item .bd{color:var(--mute);font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
-.item .ag{font:11px var(--mono);color:var(--mute);white-space:nowrap}
-.empty{color:var(--mute);font-size:13px;padding:8px 2px}
-/* bots */
-.bots{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.bot{border:1px solid var(--line);border-radius:9px;padding:10px;background:rgba(25,211,255,.03)}
-.bot .n{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);flex:none}
-.dot.off{background:var(--red);box-shadow:0 0 8px var(--red)}
-.dot.idle{background:var(--amber);box-shadow:0 0 8px var(--amber)}
-.bot .m{font:11px var(--mono);color:var(--mute);margin-top:6px}
-.tiles{display:grid;gap:4px;margin-top:8px}
-.tile{display:flex;justify-content:space-between;font:12px var(--mono)}
-.tile span{color:var(--mute)}.tile b{color:var(--ink)}
-.up{color:var(--teal)}.dn{color:var(--red)}
+.feed{display:grid;gap:8px;max-height:380px;overflow:auto}
+.it{display:grid;grid-template-columns:auto 1fr auto;gap:9px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;background:rgba(25,211,255,.03);align-items:start}
+.tag{font:700 9px var(--mono);letter-spacing:.1em;padding:3px 6px;border-radius:4px;margin-top:1px}
+.tag.INFO{background:rgba(25,211,255,.16);color:var(--cyan)}.tag.WARN{background:rgba(255,176,32,.16);color:var(--amber)}
+.tag.TIP{background:rgba(138,125,255,.18);color:var(--violet)}.tag.URGENT{background:rgba(255,77,94,.2);color:var(--red)}.tag.LIVE{background:rgba(46,242,200,.16);color:var(--teal)}
+.it .tt{font-weight:600;font-size:13px;overflow-wrap:anywhere}.it .bd{color:var(--mute);font-size:12px;overflow-wrap:anywhere;white-space:pre-wrap}.it .ag{font:11px var(--mono);color:var(--mute)}
 /* timeline */
 .tl{display:grid;gap:0;position:relative;padding-left:14px}
 .tl::before{content:"";position:absolute;left:3px;top:6px;bottom:6px;width:1px;background:var(--line-hi)}
-.tl>div{position:relative;padding:5px 0 9px}
-.tl>div::before{content:"";position:absolute;left:-14px;top:10px;width:7px;height:7px;border-radius:50%;background:var(--bg);border:1px solid var(--cyan)}
+.tl>div{position:relative;padding:4px 0 10px}
+.tl>div::before{content:"";position:absolute;left:-14px;top:9px;width:7px;height:7px;border-radius:50%;background:var(--bg);border:1px solid var(--cyan)}
 .tl>div.done::before{background:var(--teal);border-color:var(--teal)}
-.tl .tm{font:11px var(--mono);color:var(--cyan)}
-.tl .tx{font-size:13px}.tl .nt{font-size:12px;color:var(--mute)}
-/* commands */
-form.cmd{display:grid;gap:8px}
-.cmd input,.cmd select,.cmd textarea{width:100%;background:rgba(5,11,20,.7);border:1px solid var(--line);border-radius:7px;padding:8px 10px}
-.cmd input:focus,.cmd select:focus,.cmd textarea:focus{outline:none;border-color:var(--cyan);box-shadow:var(--glow)}
-.row{display:flex;gap:8px;flex-wrap:wrap}
-.msg{font:12px var(--mono);color:var(--mute);min-height:16px}
-/* gauges */
-.gauges{display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap}
-.g{text-align:center}
-.g svg{width:86px;height:86px;transform:rotate(-90deg)}
-.g circle{fill:none;stroke-width:6}
-.g .bg{stroke:rgba(25,211,255,.14)}
-.g .fg{stroke:var(--cyan);stroke-linecap:round;filter:drop-shadow(0 0 4px rgba(25,211,255,.7));transition:stroke-dashoffset .8s}
-.g .v{position:relative;margin-top:-58px;height:30px;font:700 15px var(--mono)}
-.g .l{margin-top:28px;font:11px var(--mono);color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
-/* activity bars */
-.bars{margin-top:16px;display:grid;gap:8px}
-.bars h3{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
-.bar{display:grid;grid-template-columns:96px 1fr 22px;gap:8px;align-items:center;font:12px var(--mono)}
-.bar .tr{height:6px;border-radius:3px;background:rgba(25,211,255,.12);overflow:hidden}
-.bar .fl{height:100%;background:linear-gradient(90deg,var(--cyan),var(--teal));box-shadow:0 0 8px rgba(25,211,255,.6)}
-.bar span{color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar b{text-align:right}
-/* login overlay */
-#login{position:fixed;inset:0;background:rgba(5,11,20,.94);display:none;place-items:center;z-index:9}
+.tl>div.next::before{background:var(--amber);border-color:var(--amber);box-shadow:0 0 8px var(--amber)}
+.tl .r1{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.tl .tm{font:11px var(--mono);color:var(--cyan)}.tl .in{font:11px var(--mono);color:var(--mute);white-space:nowrap}
+.tl .nt{font:11px var(--mono);color:var(--mute)}
+.pg{height:3px;border-radius:2px;background:rgba(25,211,255,.14);margin-top:5px;overflow:hidden}
+.pg i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--teal));box-shadow:0 0 8px rgba(25,211,255,.7)}
+/* heat */
+.heat{display:grid;gap:4px}
+.hr{display:grid;grid-template-columns:84px 1fr;gap:8px;align-items:center;font:11px var(--mono);color:var(--mute)}
+.hr>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hc{display:grid;grid-template-columns:repeat(14,1fr);gap:3px}
+.hc i{aspect-ratio:1;border-radius:3px;background:rgba(25,211,255,.08);border:1px solid rgba(25,211,255,.1)}
+.hc i.blank{background:none;border-color:rgba(25,211,255,.06)}
+.hc i.l1{background:rgba(25,211,255,.3)}.hc i.l2{background:rgba(25,211,255,.6)}.hc i.l3{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.hc i.miss{background:rgba(255,77,94,.18);border-color:var(--red)}
+.leg{display:flex;gap:10px;margin-top:8px;font:10px var(--mono);color:var(--mute);align-items:center;flex-wrap:wrap}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:2px}
+/* finance */
+.sens{transition:filter .25s}
+body.priv .sens:not(.show){filter:blur(7px);cursor:pointer;user-select:none}
+.bigv{font:700 26px var(--mono);letter-spacing:.02em}
+.up{color:var(--teal)}.dn{color:var(--red)}
+.fin{display:grid;gap:10px}
+.fin .row{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.fin .cap{font:11px var(--mono);color:var(--mute)}
+svg.spark{width:100%;height:62px}
+.bills{display:grid;gap:5px}
+.bill{display:flex;justify-content:space-between;gap:8px;font-size:12px;border:1px solid var(--line);border-radius:7px;padding:6px 9px}
+.bill b{font:600 11px var(--mono);color:var(--amber)}.bill b.late{color:var(--red)}
+.ring{display:flex;gap:12px;align-items:center}
+.ring .dn2{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;flex:none}
+.ring .dn2::after{content:"";width:48px;height:48px;border-radius:50%;background:#071626}
+.leg2{display:grid;gap:2px;font:11px var(--mono);color:var(--mute)}
+.leg2 i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+/* vitals */
+.vit{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center}
+.body{position:relative;width:96px;height:170px}
+.body svg{width:100%;height:100%}
+.body .scan{position:absolute;left:0;right:0;height:2px;background:var(--cyan);box-shadow:0 0 12px var(--cyan);animation:scan 3.2s ease-in-out infinite}
+@keyframes scan{0%{top:2%}50%{top:96%}100%{top:2%}}
+.vs{display:grid;gap:8px}
+.vr{display:flex;justify-content:space-between;font:12px var(--mono);border-bottom:1px solid var(--line);padding-bottom:5px}
+.vr span{color:var(--mute)}.vr b{font-size:14px}
+.ecg{width:100%;height:30px}
+.ecg path{stroke:var(--red);fill:none;stroke-width:1.5;stroke-dasharray:200;animation:ecg 2.4s linear infinite;filter:drop-shadow(0 0 3px var(--red))}
+@keyframes ecg{from{stroke-dashoffset:200}to{stroke-dashoffset:-200}}
+/* status bar */
+.status{position:fixed;left:0;right:0;bottom:0;display:flex;gap:10px;align-items:center;padding:10px 20px calc(10px + env(safe-area-inset-bottom));background:rgba(4,10,18,.88);border-top:1px solid var(--line);backdrop-filter:blur(8px);z-index:5}
+.sc{font:11px var(--mono);color:var(--mute);display:flex;gap:6px;align-items:center;white-space:nowrap}
+.sc b{color:var(--ink)}
+.ask{flex:1;max-width:520px;margin:0 auto;display:flex;gap:10px;align-items:center;border:1px solid var(--line-hi);border-radius:22px;padding:8px 16px;background:rgba(25,211,255,.06);color:var(--mute);box-shadow:var(--glow);text-align:left}
+.ask:hover{background:rgba(25,211,255,.12)}
+.ask .w{display:flex;gap:2px;align-items:center;height:14px}
+.ask .w i{width:2px;background:var(--cyan);border-radius:1px;animation:wv 1.2s ease-in-out infinite}
+.ask .w i:nth-child(2){animation-delay:.15s}.ask .w i:nth-child(3){animation-delay:.3s}.ask .w i:nth-child(4){animation-delay:.45s}.ask .w i:nth-child(5){animation-delay:.6s}
+@keyframes wv{0%,100%{height:3px}50%{height:14px}}
+#screens,#tabs{display:none}
+.only-m{display:none}
+/* palette + modal + login */
+.ov{position:fixed;inset:0;background:rgba(2,8,14,.8);backdrop-filter:blur(4px);display:none;z-index:20;align-items:flex-start;justify-content:center;padding-top:14vh}
+.ov.open{display:flex}
+.box{width:min(560px,92vw);border:1px solid var(--line-hi);border-radius:12px;background:#07131f;box-shadow:0 0 40px rgba(25,211,255,.2);overflow:hidden}
+.box input{width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:14px 16px;font-size:15px;outline:none}
+.pl{max-height:50vh;overflow:auto}
+.pi{display:flex;justify-content:space-between;gap:10px;padding:10px 16px;font-size:13px;cursor:pointer}
+.pi.sel,.pi:hover{background:rgba(25,211,255,.12)}
+.pi span{color:var(--mute);font:11px var(--mono);white-space:nowrap}
+.mod{padding:18px 20px}
+.mod h2{font:600 12px var(--mono);letter-spacing:.2em;color:var(--acc);text-transform:uppercase;margin-bottom:10px}
+.mod li{margin:8px 0}
+.toast{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);background:#07131f;border:1px solid var(--line-hi);border-radius:8px;padding:8px 14px;font:12px var(--mono);opacity:0;transition:opacity .25s;z-index:30;pointer-events:none;max-width:92vw}
+.toast.on{opacity:1}
+#login{position:fixed;inset:0;background:rgba(5,11,20,.96);display:none;place-items:center;z-index:40}
 #login form{display:grid;gap:10px;width:min(320px,86vw);padding:22px;border:1px solid var(--line-hi);border-radius:12px;background:var(--panel)}
 #login h2{font:600 13px var(--mono);letter-spacing:.2em;color:var(--cyan);text-transform:uppercase;text-align:center}
 #login input{background:rgba(5,11,20,.8);border:1px solid var(--line);border-radius:7px;padding:10px}
-/* responsive */
-@media (max-width:1100px){.c3,.c4,.c5,.c6,.c8{grid-column:span 12}.grid .coreCol{order:-1}}
+#login .msg{font:12px var(--mono);color:var(--red);min-height:16px;text-align:center}
+/* phone */
 @media (max-width:820px){
-  .shell{grid-template-columns:1fr}
-  nav.side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;gap:4px;padding:10px;border-right:0;border-bottom:1px solid var(--line)}
-  nav.side .brand,nav.side .foot{display:none}
-  nav.side a{padding:6px 10px}
-  main{padding:12px 12px 24px}
-  .clock{order:3;flex-basis:100%;margin:0}
+  #wall{display:none}
+  .top{padding:8px 12px 4px;gap:6px}.brand{margin:0}.brand span{display:none}.chip{padding:6px 9px;font-size:10px}
+  .clock{order:9;flex-basis:100%;margin:0;display:flex;align-items:baseline;justify-content:center;gap:10px}.clock .t{font-size:18px}.clock .dt{font-size:10px}
+  .hide-m{display:none!important}.only-m{display:inline}
+  #privBtn{margin-left:auto}
+  #screens{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;height:calc(100dvh - var(--chrome,160px));scrollbar-width:none}
+  #screens::-webkit-scrollbar{display:none}
+  .scr{flex:0 0 100%;scroll-snap-align:start;overflow-y:auto;padding:4px 12px 16px;display:grid;gap:12px;align-content:start}
+  #tabs{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:var(--foot,56px);background:rgba(4,10,18,.92);border-top:1px solid var(--line);z-index:5}
+  #tabs button{background:none;border:0;padding:10px 4px;font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);border-bottom:2px solid transparent}
+  #tabs button.on{color:var(--acc);border-bottom-color:var(--acc);text-shadow:0 0 10px currentColor}
+  .status{padding:8px 12px calc(8px + env(safe-area-inset-bottom));gap:8px}.status .sc{display:none}
+  .ask{padding:8px 12px;min-width:0;max-width:none;margin:0;overflow:hidden;white-space:nowrap}.ask kbd{display:none}
+  .toast{bottom:130px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<div id="login"><form id="loginForm"><h2>Authenticate</h2><input id="pw" type="password" placeholder="Password" autocomplete="current-password"><button class="btn">Sign in</button><div class="msg" id="loginMsg"></div></form></div>
-<div class="shell">
-  <nav class="side">
-    <div class="brand"><i></i>Command</div>
-    <a class="on" href="#core">Command Center</a>
-    <a href="#feed">Briefings <b id="navBriefs">0</b></a>
-    <a href="#bots">Bots <b id="navBots">0</b></a>
-    <a href="#timeline">Timeline</a>
-    <a href="#tasks">Tasks <b id="navTasks">0</b></a>
-    <div class="foot" id="foot">&nbsp;</div>
-  </nav>
-  <main>
-    <div class="top">
-      <span class="chip" id="sys"><span class="d"></span><span id="sysTxt">System status: …</span></span>
-      <span class="chip demo" id="demoChip" hidden>Demo data</span>
-      <div class="clock"><div class="t" id="clk">--:--:--</div><div class="dt" id="dt">&nbsp;</div></div>
-      <button class="btn ghost" id="refresh" title="Refresh">Refresh</button>
-      <button class="btn ghost" id="signout" hidden>Sign out</button>
-    </div>
-    <div class="grid">
-      <section class="panel c3" id="bots"><div class="ph"><h2>Bot overview</h2><span id="botSub"></span></div><div class="bots" id="botList"></div></section>
-      <section class="panel c6 coreCol coreBox" id="core">
-        <div class="core" id="coreOrb"><div class="r r1"></div><div class="r r2"></div><div class="r r3"></div><div class="orb"></div><div class="lbl" id="coreLbl">ONLINE</div></div>
-        <div class="greet"><h1 id="greet">Good morning</h1><p id="headline">Loading…</p></div>
-        <div class="prio" id="prio"></div>
-      </section>
-      <section class="panel c3" id="feed"><div class="ph"><h2>Live feed</h2><span id="feedSub"></span></div><div class="feed" id="feedList"></div></section>
+<div id="band"></div>
+<header class="top">
+  <div class="brand"><i></i><span>Command</span></div>
+  <span class="chip sys"><span class="d"></span><span class="hide-m">System status:&nbsp;</span><span id="sysTxt">optimal</span></span>
+  <!--DEMO--><span class="chip democ" id="demoChip" hidden>Demo · sample data</span><!--/DEMO-->
+  <div class="clock"><div class="t" id="clk">--:--:--</div><div class="dt" id="dt">&nbsp;</div></div>
+  <!--DEMO--><button class="chip btn hide-m" id="pvToggle" title="Preview control">Preview: trigger alert</button><!--/DEMO-->
+  <button class="chip btn" id="privBtn" title="Hide or show finance numbers">Privacy: off</button>
+  <button class="chip btn hide-m" id="palBtn">Search / command <kbd>Ctrl K</kbd></button>
+  <!--LIVE--><button class="chip btn hide-m" id="signout">Sign out</button><!--/LIVE-->
+</header>
 
-      <section class="panel c4"><div class="ph"><h2>System monitor</h2><span>live</span></div><div class="gauges" id="gauges"></div><div class="bars"><h3>Reports per bot (24 h)</h3><div id="barList"></div></div></section>
-      <section class="panel c4" id="timeline"><div class="ph"><h2>Mission timeline</h2><span>today</span></div><div class="tl" id="tlList"></div></section>
-      <section class="panel c4" id="tasks"><div class="ph"><h2>Quick commands</h2><span id="taskSub"></span></div>
-        <form class="cmd" id="cmd">
-          <select id="cmdBot"></select>
-          <input id="cmdTitle" placeholder="Give a bot a task…" maxlength="200" required>
-          <textarea id="cmdDetail" rows="2" placeholder="Details (optional)"></textarea>
-          <div class="row"><button class="btn">Send task</button><span class="msg" id="cmdMsg"></span></div>
-        </form>
-        <div class="feed" id="taskList" style="margin-top:10px;max-height:190px"></div>
-      </section>
-    </div>
-  </main>
+<div id="wall"><div class="col" id="colL"></div><div class="col" id="colC"></div><div class="col" id="colR"></div></div>
+<div id="screens"><section class="scr" id="s-brief"></section><section class="scr" id="s-bots"></section><section class="scr" id="s-money"></section><section class="scr" id="s-body"></section></div>
+<nav id="tabs"><button data-i="0" class="on">Brief</button><button data-i="1">Bots</button><button data-i="2">Money</button><button data-i="3">Body</button></nav>
+
+<footer class="status">
+  <div class="sc x" id="wx">☁ <b>18°C</b> clear</div>
+  <div class="sc">▶ <span id="nextTxt">Next: nothing scheduled</span> <b id="nextCd"></b></div>
+  <div class="sc x" id="hubSc">● Hub <b>online</b></div>
+  <button class="ask" id="ask"><span class="w"><i></i><i></i><i></i><i></i><i></i></span><span>Ask or command…</span><kbd>Ctrl K</kbd></button>
+  <button class="chip btn" id="exec"><span class="hide-m">Executive briefing</span><span class="only-m">Brief</span></button>
+</footer>
+
+<div class="ov" id="pal"><div class="box"><input id="palIn" placeholder="Type a command…" autocomplete="off"><div class="pl" id="palList"></div></div></div>
+<div class="ov" id="brief"><div class="box mod"><h2>Executive briefing</h2><ul id="briefList"></ul><button class="b" id="briefClose">Close</button></div></div>
+<!--LIVE--><div id="login"><form id="loginForm"><h2>Authenticate</h2><input id="pw" type="password" placeholder="Password" autocomplete="current-password"><button class="b big ok">Sign in</button><div class="msg" id="loginMsg"></div></form></div><!--/LIVE-->
+<div class="toast" id="toast"></div>
+
+<div id="pool" hidden>
+  <section class="panel" id="pNeed"><div class="ph"><h2>Needs you</h2><span class="badge" id="needN">0</span></div><div class="need" id="needList"></div></section>
+  <section class="panel" id="pRos"><div class="ph"><h2>Bot roster</h2><span id="rosSub"></span></div><div class="ros" id="rosList"></div></section>
+  <section class="panel coreP" id="pCore"><div class="ph"><h2>Core</h2><span><span class="hide-m">hover a bot · click for details</span><span class="only-m">tap a bot</span></span></div>
+    <div class="cw" id="cw"><canvas id="orbit"></canvas><div class="tip" id="tip"></div></div>
+    <div class="hello"><h1 id="greet">Good morning</h1><p id="headline">Loading…</p></div></section>
+  <section id="pNow"><div class="rn"><div class="lb" id="nowLb">Right now</div><div class="t" id="nowTitle"></div><div class="cd" id="nowCd"></div><div class="a" id="nowActs"></div></div></section>
+  <section class="panel" id="pTl"><div class="ph"><h2>Mission timeline</h2><span>today</span></div><div class="tl" id="tlList"></div></section>
+  <section class="panel" id="pHeat"><div class="ph"><h2>Reporting grid</h2><span>14 days</span></div><div class="heat" id="heat"></div>
+    <div class="leg">less <i style="background:rgba(25,211,255,.3)"></i><i style="background:rgba(25,211,255,.6)"></i><i style="background:var(--cyan)"></i> more <i style="border:1px solid var(--red);background:rgba(255,77,94,.18);margin-left:8px"></i> missed</div></section>
+  <section class="panel" id="pFeed"><div class="ph"><h2>Live feed</h2><span class="tag LIVE">LIVE</span></div><div class="feed" id="feedList"></div></section>
+  <section class="panel" id="pFin"><div class="ph"><h2>Finance</h2><span id="finSub"></span></div><div id="finBody"></div></section>
+  <section class="panel" id="pVit"><div class="ph"><h2>Vitals</h2><span id="vitSub"></span></div><div id="vitBody"></div></section>
 </div>
+
 <script>
 "use strict";
-const DEMO = new URLSearchParams(location.search).has("demo");
 const $ = id => document.getElementById(id);
-const el = (t, cls, text) => { const e = document.createElement(t); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const clear = n => { while (n.firstChild) n.removeChild(n.firstChild); return n; };
+const MODE = document.documentElement.dataset.mode || "preview";
+const LIVE = MODE === "live";
+const GUEST = MODE === "demo" ? (new URLSearchParams(location.search).get("name") || "").replace(/[^\p{L}\p{N} .'\-]/gu, "").trim().slice(0, 24) : "";
+const mq = matchMedia("(max-width:820px)");
+const reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
+const toast = m => { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 2400); };
+const PALETTE = ["#19d3ff", "#2ef2c8", "#8a7dff", "#7dff9a", "#ffb020", "#ff7ab6", "#ffd166"];
+const GL = {
+  hex: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 8v8M8.5 10l7 4"/>',
+  mail: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 8l9 6 9-6"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+  pulse: '<path d="M3 12h4l2-6 4 12 2-6h6"/>',
+  coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.6-.9-1.5-1.2-2.5-1.2-1.4 0-2.5.8-2.5 1.9 0 2.7 5 1.2 5 3.9 0 1.1-1.1 2-2.5 2-1.1 0-2-.4-2.6-1.3M12 6.5v11"/>',
+  dot: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/>',
+};
+function glyphFor(n) { n = n.toLowerCase();
+  if (/chief|staff|exec|assist|stark/.test(n)) return GL.hex; if (/mail|inbox/.test(n)) return GL.mail;
+  if (/social|post|content|media/.test(n)) return GL.chat; if (/fit|health|gym|vital|body/.test(n)) return GL.pulse;
+  if (/fin|money|bank|cash|budget/.test(n)) return GL.coin; return GL.dot; }
 const ago = iso => { if (!iso) return "never"; const m = Math.round((Date.now() - new Date(iso)) / 60000);
   return m < 1 ? "now" : m < 60 ? m + "m" : m < 1440 ? Math.round(m / 60) + "h" : Math.round(m / 1440) + "d"; };
-const STALE_H = 26;
+const span = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? Math.floor(m / 60) + "h " + (m % 60) + "m" : m + "m"; };
+function parseWhen(at) { if (!at) return null; const m = /^(\d{1,2}):(\d{2})$/.exec(String(at).trim());
+  if (m) { const d = new Date(); d.setHours(+m[1], +m[2], 0, 0); return d.getTime(); } const t = Date.parse(at); return isNaN(t) ? null : t; }
+const hhmm = t => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+const emptyModel = () => ({ owner: "", bots: [], feed: [], needs: [], timeline: [], heat: null, finance: null, vitals: null, brief: [], headline: "Loading…", now: null, alert: null });
 
-/* ---------- data sources ---------- */
-function demoData() {
-  const now = Date.now(), mins = n => new Date(now - n * 60000).toISOString();
-  return {
-    headline: "Three things need you today. Everything else is handled.",
-    priorities: [
-      ["Reply to Sam before noon", "inbox"], ["Move the 2 pm dentist, it clashes with the investor call", "chief-of-staff"], ["Approve tomorrow's 3 scheduled posts", "social"]],
-    bots: [
-      { name: "chief-of-staff", healthy: true, last: mins(14), open: 1, tiles: [["Meetings today", "3"], ["Conflicts", "1"]] },
-      { name: "inbox", healthy: true, last: mins(32), open: 0, tiles: [["Unread", "12"], ["Urgent", "2"]] },
-      { name: "social", healthy: true, last: mins(95), open: 2, tiles: [["Followers", "+42", "up"], ["Posts queued", "3"]] },
-      { name: "fitness", healthy: true, last: mins(400), open: 0, tiles: [["Steps", "8,240"], ["Streak", "6d"]] },
-      { name: "finance", healthy: false, last: mins(1700), open: 0, tiles: [["Cash flow", "On track"], ["Bills due", "2"]] },
-    ],
-    feed: [
-      { bot: "inbox", priority: "high", title: "2 urgent replies waiting", body: "Sam (noon deadline) and the landlord.", at: mins(32) },
-      { bot: "chief-of-staff", priority: "high", title: "Calendar conflict", body: "Dentist 2 pm overlaps the investor call.", at: mins(14) },
-      { bot: "social", priority: "normal", title: "3 posts scheduled for tomorrow", body: "Reach is up 18% week on week.", at: mins(95) },
-      { bot: "fitness", priority: "low", title: "6 day streak", body: "8,240 steps so far. Evening run suggested.", at: mins(400) },
-      { bot: "finance", priority: "alert", title: "No update for over 24 hours", body: "The finance bot has not reported.", at: mins(1700) },
-    ],
-    timeline: [
-      { at: "07:30", text: "Morning briefing delivered", note: "chief-of-staff", done: true },
-      { at: "09:00", text: "Daily stand-up", note: "calendar", done: true },
-      { at: "12:00", text: "Reply to Sam (deadline)", note: "inbox", done: false },
-      { at: "14:00", text: "Investor call", note: "conflicts with dentist", done: false },
-      { at: "18:00", text: "Evening run", note: "fitness", done: false }],
-    tasks: [{ bot: "social", title: "Draft Friday's caption", status: "open" }, { bot: "chief-of-staff", title: "Reschedule dentist", status: "open" }, { bot: "inbox", title: "Summarise overnight email", status: "done" }],
-    gauges: { online: 80, tasks: 33, fresh: 91 },
-  };
+let M = emptyModel(), OB = [], hover = -1;
+const pulses = [], ripples = [], pos = [];
+
+/* ================= models ================= */
+/*DEMO-START*/
+let demoAlert = false;
+let DEMO_NEEDS = [{ id: 1, title: "Post “Friday launch” to Instagram", meta: "social · scheduled 12:00" },
+  { id: 2, title: "Pay invoice to Hosting Co", meta: "finance · due in 2 days · ", amount: "$84.20" }, { id: 3, title: "Send reply to Sam", meta: "inbox · draft ready" }];
+function demoModel() {
+  const now = Date.now(), min = n => new Date(now - n * 60000).toISOString();
+  const raw = [["chief-of-staff", "working", "3 meetings · 1 conflict", min(14)], ["inbox", "working", "12 unread · 2 urgent", min(32)], ["social", "idle", "3 posts queued", min(95)],
+    ["fitness", "idle", "8,240 steps · 6d streak", min(400)], ["finance", demoAlert ? "silent" : "idle", "2 bills due soon", demoAlert ? min(1600) : min(300)]];
+  const bots = raw.map((r, i) => ({ id: r[0], state: r[1], note: r[2], last: r[3], color: PALETTE[i], glyph: glyphFor(r[0]) }));
+  let s = 7; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280, rows = {};
+  bots.forEach(b => { rows[b.id] = Array.from({ length: 14 }, (_, d) => { const v = rnd(); return (b.id === "finance" && d > 11) ? 0 : v < .1 ? 0 : v < .35 ? 1 : v < .7 ? 2 : 3; }); });
+  const ev = [[-200, "Morning briefing delivered", "chief-of-staff", true], [-150, "Daily stand-up", "calendar", true], [38, "Reply to Sam (deadline)", "inbox"], [132, "Investor call", "conflicts with dentist"], [380, "Evening run", "fitness"]];
+  let nextSet = false;
+  const timeline = ev.map(e => { const t = now + e[0] * 60000, o = { at: hhmm(t), text: e[1], note: e[2] || "", done: !!e[3] };
+    if (!o.done && !nextSet) { o.next = true; nextSet = true; } if (!o.done) { o.inMs = t - now; o.progress = Math.max(5, 100 - e[0] / 180 * 100); } return o; });
+  return { owner: GUEST, bots, timeline, heat: { dates: [], rows }, now: { lb: "Right now", title: "Reply to Sam before the noon deadline", due: now + 38 * 60000,
+      acts: [{ label: "Open draft", cls: "ok", fn: () => toast("Opening draft (demo)") }, { label: "Snooze 1h", cls: "", fn: () => toast("Snoozed 1h (demo)") }] },
+    needs: DEMO_NEEDS, alert: demoAlert ? "Finance has been silent for 26 hours · last report 07:04 yesterday" : null,
+    headline: demoAlert ? "Finance has gone quiet. Everything else is fine." : "3 things need you today. Everything else is handled.",
+    feed: [["URGENT", "2 urgent replies waiting", "Sam (noon deadline) and the landlord · inbox", min(32)], ["WARN", "Calendar conflict", "Dentist 2 pm overlaps the investor call · chief-of-staff", min(14)],
+      ["INFO", "3 posts scheduled for tomorrow", "Reach up 18% week on week · social", min(95)], ["TIP", "Evening run suggested", "Recovery is 78%, weather clear at 18:00 · fitness", min(180)],
+      ["INFO", "Invoice from Hosting Co", "$84.20 due in 2 days · finance", min(300)], ["LIVE", "All connectors healthy", "Gmail, Calendar, Drive, Buffer, Higgsfield", min(0)]].map(f => ({ tag: f[0], title: f[1], body: f[2], at: f[3] })),
+    finance: { balance: "$18,420.55", change_30d: "+$1,240.10", series: [48, 44, 50, 38, 41, 30, 34, 26, 32, 22, 28, 18, 24, 14, 20, 10].map(v => 62 - v),
+      categories: [{ name: "Rent", pct: 45 }, { name: "Business", pct: 25 }, { name: "Food", pct: 15 }, { name: "Other", pct: 15 }],
+      bills: [{ name: "Hosting Co", amount: "$84.20", dueMs: now + 2 * 864e5 }, { name: "Card payment", amount: "$410.00", dueMs: now + 5 * 864e5 }, { name: "Rent", amount: "$1,800.00", dueMs: now + 9 * 864e5 }] },
+    vitals: { steps: 8240, steps_goal: 10000, sleep_hours: 7.2, heart_rate: 62, recovery: 78, streak: 6, src: "fitness bot · 06:50" },
+    brief: ["Priority 1: reply to Sam before noon (38 min).", "The 2 pm dentist clashes with the investor call. Suggest moving the dentist.", "3 posts go out tomorrow; 1 needs your approval.", "Finance: 2 bills due this week, cash flow on track.", "Fitness: 6 day streak, run suggested at 18:00."] };
 }
-function liveData(o) {
-  const bots = o.bots.map(b => ({ name: b.bot, healthy: b.healthy, last: b.last_brief, open: b.open_tasks, tiles: [] }));
-  const feed = o.briefs.map(b => ({ bot: b.bot, priority: b.kind === "alert" ? "alert" : b.priority, title: b.title, body: b.body, at: b.created_at }));
-  const high = feed.filter(f => f.priority === "high" || f.priority === "alert").slice(0, 3);
-  const quiet = bots.filter(b => !b.healthy).length;
-  const doneN = o.tasks.filter(t => t.status === "done").length;
-  const lastAt = Math.max(0, ...o.briefs.map(b => +new Date(b.created_at)));
-  const fresh = lastAt ? Math.max(0, Math.round(100 - ((Date.now() - lastAt) / 36e5) / STALE_H * 100)) : 0;
-  const act = [...o.briefs.map(b => ({ t: +new Date(b.created_at), text: b.title, note: b.bot, done: true })),
-               ...o.tasks.map(t => ({ t: +new Date(t.completed_at || t.created_at), text: t.title, note: t.bot + " · task", done: t.status === "done" }))]
-    .sort((a, b) => b.t - a.t).slice(0, 6).map(x => ({ at: new Date(x.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), text: x.text, note: x.note, done: x.done }));
-  return {
-    headline: feed.length ? (high.length ? high.length + " item" + (high.length > 1 ? "s" : "") + " need your attention." : "Nothing urgent. Everything reported in.") : "No briefs yet. Bots will appear here once they report.",
-    priorities: high.map(h => [h.title, h.bot]), bots, feed, timeline: act, tasks: o.tasks,
-    gauges: { online: bots.length ? Math.round(100 * (bots.length - quiet) / bots.length) : 0, tasks: o.tasks.length ? Math.round(100 * doneN / o.tasks.length) : 0, fresh },
-  };
-}
-
-/* ---------- render ---------- */
-function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); return n; }
-function render(d) {
-  const quiet = d.bots.filter(b => !b.healthy).length;
-  $("sys").classList.toggle("warn", quiet > 0);
-  $("sysTxt").textContent = quiet ? "System status: " + quiet + " bot" + (quiet > 1 ? "s" : "") + " quiet" : "System status: optimal";
-  $("coreOrb").classList.toggle("warn", quiet > 0);
-  $("coreLbl").textContent = quiet ? "ATTENTION" : "ONLINE";
-  const h = new Date().getHours();
-  $("greet").textContent = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-  $("headline").textContent = d.headline;
-  const prio = clear($("prio"));
-  d.priorities.forEach((p, i) => { const r = el("div"); r.append(el("b", null, "0" + (i + 1)), el("span", null, p[0] + " ")); const s = el("span", null, "· " + p[1]); s.style.color = "var(--mute)"; r.append(s); prio.append(r); });
-
-  const bl = clear($("botList"));
-  d.bots.forEach(b => { const c = el("div", "bot"); const n = el("div", "n"); n.append(el("span", "dot" + (b.healthy ? "" : " off")), el("span", null, b.name));
-    c.append(n, el("div", "m", "last report " + ago(b.last) + " · " + b.open + " task" + (b.open === 1 ? "" : "s")));
-    if (b.tiles.length) { const t = el("div", "tiles"); b.tiles.forEach(x => { const r = el("div", "tile"); r.append(el("span", null, x[0]), el("b", x[2] || "", x[1])); t.append(r); }); c.append(t); }
-    bl.append(c); });
-  $("botSub").textContent = (d.bots.length - quiet) + "/" + d.bots.length + " online";
-  $("navBots").textContent = d.bots.length;
-
-  const fl = clear($("feedList"));
-  if (!d.feed.length) fl.append(el("div", "empty", "Nothing in the last 24 hours."));
-  d.feed.forEach(f => { const it = el("div", "item " + f.priority); it.append(el("div", "ic", f.priority === "alert" ? "!" : f.priority === "high" ? "▲" : "●"));
-    const b = el("div"); b.append(el("div", "tt", f.title), el("div", "bd", f.body + " — " + f.bot)); it.append(b, el("div", "ag", ago(f.at))); fl.append(it); });
-  $("feedSub").textContent = d.feed.length + " items";
-  $("navBriefs").textContent = d.feed.length;
-
-  const tl = clear($("tlList"));
-  if (!d.timeline.length) tl.append(el("div", "empty", "Nothing yet today."));
-  d.timeline.forEach(x => { const r = el("div", x.done ? "done" : ""); r.append(el("div", "tm", x.at), el("div", "tx", x.text), el("div", "nt", x.note)); tl.append(r); });
-
-  const gs = clear($("gauges"));
-  [["Bots online", d.gauges.online], ["Tasks done", d.gauges.tasks], ["Freshness", d.gauges.fresh]].forEach(([l, v]) => {
-    const g = el("div", "g"), C = 2 * Math.PI * 34;
-    g.innerHTML = '<svg viewBox="0 0 80 80"><circle class="bg" cx="40" cy="40" r="34"/><circle class="fg" cx="40" cy="40" r="34" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - v / 100)).toFixed(1) + '"/></svg>';
-    g.append(el("div", "v", v + "%"), el("div", "l", l)); gs.append(g); });
-
-  const bars = clear($("barList")), counts = {}; d.feed.forEach(f => counts[f.bot] = (counts[f.bot] || 0) + 1);
-  const mx = Math.max(1, ...d.bots.map(b => counts[b.name] || 0));
-  d.bots.forEach(b => { const n = counts[b.name] || 0, r = el("div", "bar"), t = el("div", "tr"), f = el("div", "fl"); f.style.width = (100 * n / mx) + "%"; t.append(f);
-    r.append(el("span", null, b.name), t, el("b", null, String(n))); bars.append(r); });
-  const sel = $("cmdBot"), keep = sel.value; clear(sel); d.bots.forEach(b => sel.append(el("option", null, b.name))); if (keep) sel.value = keep;
-  const tk = clear($("taskList")); const open = d.tasks.filter(t => t.status !== "done");
-  if (!d.tasks.length) tk.append(el("div", "empty", "No tasks yet."));
-  d.tasks.slice(0, 6).forEach(t => { const it = el("div", "item"); it.append(el("div", "ic", t.status === "done" ? "✓" : "…")); const b = el("div"); b.append(el("div", "tt", t.title), el("div", "bd", t.bot + " · " + t.status)); it.append(b, el("div")); tk.append(it); });
-  $("taskSub").textContent = open.length + " open"; $("navTasks").textContent = open.length;
-  $("foot").textContent = DEMO ? "demo mode" : "synced " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-/* ---------- plumbing ---------- */
+/*DEMO-END*/
+/*LIVE-START*/
 async function api(path, opt = {}) {
   const r = await fetch(path, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...opt });
   if (r.status === 401) throw new Error("auth");
   const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || j.detail || r.statusText); return j;
 }
-async function load() {
-  try { render(DEMO ? demoData() : liveData(await api("/api/overview"))); $("login").style.display = "none"; if (!DEMO) $("signout").hidden = false; }
-  catch (e) { if (e.message === "auth") $("login").style.display = "grid"; else $("headline").textContent = "Error: " + e.message; }
+function liveModel(d) {
+  const now = Date.now(), snaps = d.snapshots || {}, order = d.bots.map(b => b.bot);
+  const note = b => { const s = snaps[b]; if (!s) return ""; return (s.tiles && s.tiles.length) ? s.tiles.slice(0, 2).map(t => t.label + " " + t.value).join(" · ") : (s.note || ""); };
+  const bots = d.bots.map((b, i) => ({ id: b.bot, state: b.last_report ? b.state : "waiting", note: note(b.bot), last: b.last_report, color: PALETTE[i % PALETTE.length], glyph: glyphFor(b.bot) }));
+  const feed = d.briefs.map(b => ({ tag: b.kind === "alert" ? "URGENT" : b.priority === "high" ? "WARN" : b.priority === "low" ? "TIP" : "INFO", title: b.title,
+    body: (b.body.length > 140 ? b.body.slice(0, 140) + "…" : b.body) + " · " + b.bot, at: b.created_at }));
+  const needs = d.approvals.map(a => ({ id: a.id, title: a.title, meta: a.bot + (a.detail ? " · " + a.detail.slice(0, 80) : ""), amount: a.amount, bot: a.bot }));
+  // events from every bot's snapshot
+  const ev = []; order.forEach(b => (snaps[b] && snaps[b].events || []).forEach(e => ev.push({ ...e, bot: b, t: parseWhen(e.at) })));
+  ev.sort((a, b) => (a.t ?? 9e15) - (b.t ?? 9e15));
+  let nextSet = false;
+  const timeline = ev.slice(0, 12).map(e => { const done = !!e.done || (e.t != null && e.t < now), o = { at: e.t != null ? hhmm(e.t) : e.at, text: e.title, note: e.note || e.bot, done };
+    if (!done && e.t != null) { o.inMs = e.t - now; o.progress = Math.max(5, Math.min(100, 100 - (e.t - now) / 6e4 / 180 * 100)); if (!nextSet) { o.next = true; nextSet = true; } } return o; });
+  const nextEv = ev.find(e => e.t != null && e.t >= now);
+  const pr = []; order.forEach(b => (snaps[b] && snaps[b].priorities || []).forEach(p => { if (!pr.includes(p)) pr.push(p); }));
+  const hot = feed.filter(f => f.tag === "URGENT" || f.tag === "WARN");
+  const silent = bots.filter(b => b.state === "silent"), waiting = bots.filter(b => b.state === "waiting");
+  // "Right now": an imminent event, else the oldest approval, else a later event, else the top alert
+  let rn = null;
+  const decide = (a, dec) => () => onDecide(a, dec);
+  if (nextEv && nextEv.t - now < 60 * 6e4) rn = { lb: "Coming up", title: nextEv.title, due: nextEv.t, acts: [] };
+  else if (needs.length) rn = { lb: "Needs you", title: needs[0].title, sub: needs[0].meta, acts: [{ label: "Approve", cls: "ok", fn: decide(needs[0], "approve") }, { label: "Decline", cls: "no", fn: decide(needs[0], "decline") }] };
+  else if (nextEv && nextEv.t - now < 12 * 36e5) rn = { lb: "Coming up", title: nextEv.title, due: nextEv.t, acts: [] };
+  else if (hot.length) rn = { lb: "Heads up", title: hot[0].title, sub: hot[0].body, acts: [] };
+  const parts = []; if (needs.length) parts.push(needs.length + " approval" + (needs.length > 1 ? "s" : "") + " waiting"); if (hot.length) parts.push(hot.length + " alert" + (hot.length > 1 ? "s" : ""));
+  if (silent.length) parts.push(silent.length + " bot" + (silent.length > 1 ? "s" : "") + " silent");
+  const headline = !bots.some(b => b.last) ? "Waiting for your bots' first reports." : parts.length ? parts.join(" · ") + "." : "All quiet. Everything is handled.";
+  const fb = order.find(b => snaps[b] && snaps[b].finance), vb = order.find(b => snaps[b] && snaps[b].vitals);
+  const fin = fb ? { ...snaps[fb].finance, bills: (snaps[fb].finance.bills || []).map(x => ({ name: x.name, amount: x.amount, dueMs: Date.parse(x.due), dueText: x.due })) } : null;
+  const brief = [headline]; pr.slice(0, 3).forEach(p => brief.push("Priority: " + p));
+  needs.forEach(n => brief.push("Waiting for your approval: " + n.title)); silent.forEach(b => brief.push(b.id + " has stopped reporting (last: " + ago(b.last) + " ago)."));
+  if (fin) fin.bills.filter(x => !isNaN(x.dueMs) && x.dueMs - now < 3 * 864e5).forEach(x => brief.push("Bill due soon: " + x.name + " " + x.amount));
+  if (vb && snaps[vb].vitals.streak) brief.push("Streak: " + snaps[vb].vitals.streak + " days.");
+  const alertTxt = silent.length ? silent.map(b => b.id).join(", ") + (silent.length > 1 ? " have" : " has") + " stopped reporting · last report " + ago(silent[0].last) + " ago" : null;
+  return { owner: d.owner, bots, feed, needs, timeline, heat: d.grid, finance: fin, vitals: vb ? { ...snaps[vb].vitals, src: vb + " · " + ago(snaps[vb].updated_at) + " ago" } : null,
+    brief, headline, now: rn, alert: alertTxt, waitingAll: bots.length > 0 && waiting.length === bots.length, nextEv };
+}
+let prevLast = {};
+async function refresh() {
+  try { const d = await api("/api/dashboard"); $("login").style.display = "none"; const m = liveModel(d);
+    m.bots.forEach(b => { if (prevLast[b.id] && b.last && b.last !== prevLast[b.id]) pulses.push({ id: b.id, t: 0 }); prevLast[b.id] = b.last; });
+    setModel(m); }
+  catch (e) { if (e.message === "auth") { $("login").style.display = "grid"; setTimeout(() => $("pw").focus(), 50); } else toast(e.message); }
+}
+/*LIVE-END*/
+
+/* ================= model → screen ================= */
+function setModel(m) {
+  M = m; const n = m.bots.length, old = new Map(OB.map(b => [b.id, b])), SPD = [.16, -.12, .09, -.07, .05, -.045, .04];
+  OB = m.bots.map((b, i) => { const o = old.get(b.id); return { id: b.id, color: b.color, state: b.state, note: b.note, last: b.last,
+    rf: n <= 1 ? .62 : .34 + .66 * i / (n - 1), spd: o ? o.spd : SPD[i % 7], a: o ? o.a : i * 2.4 + .4 }; });
+  renderAll();
+}
+function renderAll() { renderChrome(); renderRoster(); renderNeeds(); renderNow(); renderFeed(); renderTimeline(); renderHeat(); renderFinance(); renderVitals(); if (reduce) draw(performance.now()); measure(); }
+function renderChrome() {
+  const silent = M.bots.filter(b => b.state === "silent").length, wait = M.bots.length > 0 && M.bots.every(b => b.state === "waiting");
+  document.body.classList.toggle("alert", !!M.alert); document.body.classList.toggle("wait", wait);
+  $("sysTxt").textContent = silent ? silent + " bot" + (silent > 1 ? "s" : "") + " silent" : wait ? "waiting for bots" : "optimal";
+  $("band").textContent = M.alert ? "⚠ " + M.alert : "";
+  $("headline").textContent = M.headline;
+  const nx = LIVE ? M.nextEv : (M.timeline || []).find(t => t.next);
+  $("nextTxt").textContent = nx ? "Next: " + (nx.title || nx.text) : "Next: nothing scheduled";
+  nextCdUpdate();
+}
+function nextCdUpdate() { const nx = LIVE ? M.nextEv : null; let ms = null;
+  if (LIVE) { if (M.nextEv) ms = M.nextEv.t - Date.now(); } else { const t = (M.timeline || []).find(x => x.next); if (t && M.now) ms = M.now.due - Date.now() + (t.text.startsWith("Reply") ? 0 : (t.inMs - 38 * 60000)); }
+  $("nextCd").textContent = ms != null ? "in " + span(ms) : ""; }
+function renderRoster() {
+  const r = clear($("rosList"));
+  if (!M.bots.length) r.append(el("div", "empty", "No bots configured yet."));
+  M.bots.forEach(b => { const row = el("div", "rb"), g = el("div", "gl " + b.state); g.style.setProperty("--c", b.color); g.innerHTML = '<svg viewBox="0 0 24 24">' + b.glyph + "</svg>";
+    const m = el("div"); m.append(el("div", "n", b.id), el("div", "s", b.state === "silent" ? "no report for " + ago(b.last) : b.state === "waiting" ? "waiting for first report" : (b.note || "last report " + ago(b.last) + " ago")));
+    row.append(g, m, el("div", "k " + b.state, b.state)); r.append(row); });
+  $("rosSub").textContent = M.bots.filter(b => b.state === "working" || b.state === "idle").length + "/" + M.bots.length + " online";
+}
+function renderNeeds() {
+  const l = clear($("needList"));
+  if (!M.needs.length) l.append(el("div", "empty", "Nothing waiting. Nice."));
+  M.needs.forEach(a => { const d = el("div", "nd"), m = el("div", "m", a.meta);
+    if (a.amount) { const s = el("span", "sens", a.amount); s.dataset.rev = ""; m.append(s); }
+    const act = el("div", "a"), ok = el("button", "b ok", "Approve"), no = el("button", "b no", "Decline");
+    ok.onclick = () => onDecide(a, "approve", d); no.onclick = () => onDecide(a, "decline", d); act.append(ok, no); d.append(el("div", "t", a.title), m, act); l.append(d); });
+  $("needN").textContent = M.needs.length;
+}
+function renderNow() {
+  const n = M.now, acts = clear($("nowActs"));
+  if (!n) { $("nowLb").textContent = "Right now"; $("nowTitle").textContent = "Nothing needs you right now."; $("nowCd").textContent = ""; $("nowCd").dataset.due = ""; return; }
+  $("nowLb").textContent = n.lb; $("nowTitle").textContent = n.title; $("nowCd").dataset.due = n.due || "";
+  if (n.sub) { const s = el("div", "sub", n.sub); $("nowTitle").append(s); }
+  (n.acts || []).forEach(a => { const b = el("button", "b big " + a.cls, a.label); b.onclick = a.fn; acts.append(b); }); tickNow();
+}
+function tickNow() { const due = +$("nowCd").dataset.due; if (!due) { $("nowCd").textContent = ""; return; }
+  const s = Math.max(0, Math.floor((due - Date.now()) / 1000)), p = v => String(v).padStart(2, "0");
+  $("nowCd").textContent = s ? p(Math.floor(s / 3600)) + ":" + p(Math.floor(s % 3600 / 60)) + ":" + p(s % 60) : "now"; }
+function renderFeed() {
+  const f = clear($("feedList")); if (!M.feed.length) f.append(el("div", "empty", "Nothing in the last 24 hours."));
+  M.feed.forEach(x => { const i = el("div", "it"); i.append(el("span", "tag " + x.tag, x.tag)); const b = el("div"); b.append(el("div", "tt", x.title), el("div", "bd", x.body)); i.append(b, el("div", "ag", ago(x.at))); f.append(i); });
+}
+function renderTimeline() {
+  const l = clear($("tlList")); if (!M.timeline.length) l.append(el("div", "empty", "No events reported yet."));
+  M.timeline.forEach(e => { const d = el("div", e.done ? "done" : e.next ? "next" : ""), r = el("div", "r1");
+    r.append(el("span", null, e.text), el("span", "in", e.done ? "done" : e.inMs != null ? "in " + span(e.inMs) : "")); d.append(el("div", "tm", e.at), r);
+    if (e.note) d.append(el("div", "nt", e.note)); if (!e.done && e.progress != null) { const p = el("div", "pg"), i = document.createElement("i"); i.style.width = e.progress + "%"; p.append(i); d.append(p); } l.append(d); });
+}
+function renderHeat() {
+  const h = clear($("heat")); const rows = M.heat ? M.heat.rows : {}; const ids = Object.keys(rows);
+  if (!ids.length) { h.append(el("div", "empty", "Appears once bots start reporting.")); return; }
+  ids.forEach(id => { const r = el("div", "hr"), c = el("div", "hc"), counts = rows[id], first = counts.findIndex(v => v > 0); r.append(el("span", null, id), c);
+    counts.forEach((v, i) => { const x = document.createElement("i"); x.className = first === -1 || i < first ? "blank" : v === 0 ? "miss" : v === 1 ? "l1" : v === 2 ? "l2" : "l3"; c.append(x); }); h.append(r); });
+}
+function renderFinance() {
+  const b = clear($("finBody")), f = M.finance; $("finSub").textContent = f ? "tap numbers to reveal" : "";
+  if (!f) { b.append(el("div", "empty", "Waiting for the finance bot's first report.")); return; }
+  const wrap = el("div", "fin"), row = el("div", "row"), a = el("div"), c = el("div"); c.style.textAlign = "right";
+  a.append(el("div", "cap", "BALANCE")); const bal = el("div", "bigv sens", f.balance || "—"); bal.dataset.rev = ""; a.append(bal);
+  c.append(el("div", "cap", "30 DAYS")); const ch = el("div", "sens", f.change_30d || ""); ch.dataset.rev = ""; ch.style.cssText = "font:700 15px var(--mono)"; ch.classList.add(/^\s*-/.test(f.change_30d || "") ? "dn" : "up"); c.append(ch); row.append(a, c); wrap.append(row);
+  const ser = (f.series || []).map(Number).filter(isFinite);
+  if (ser.length > 1) { const mn = Math.min(...ser), mx = Math.max(...ser), pts = ser.map((v, i) => [(i / (ser.length - 1) * 300).toFixed(1), (58 - (v - mn) / ((mx - mn) || 1) * 52).toFixed(1)]);
+    const line = pts.map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" ");
+    const s = el("div", "sens"); s.dataset.rev = ""; s.innerHTML = '<svg class="spark" viewBox="0 0 300 62" preserveAspectRatio="none"><defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#19d3ff" stop-opacity=".45"/><stop offset="1" stop-color="#19d3ff" stop-opacity="0"/></linearGradient></defs><path d="' + line + ' L300 62 L0 62Z" fill="url(#sg)"/><path d="' + line + '" fill="none" stroke="#19d3ff" stroke-width="2"/></svg>'; wrap.append(s); }
+  if ((f.categories || []).length) { const COL = ["#19d3ff", "#8a7dff", "#2ef2c8", "#ffb020", "#ff7ab6", "#7dff9a", "#ffd166", "#6f93a8"]; let acc = 0, stops = [];
+    f.categories.forEach((k, i) => { const p = Math.max(0, Math.min(100, +k.pct || 0)); stops.push(COL[i % 8] + " " + acc + "% " + (acc + p) + "%"); acc += p; }); if (acc < 100) stops.push("rgba(25,211,255,.12) " + acc + "% 100%");
+    const ring = el("div", "ring"), dn = el("div", "dn2"); dn.style.background = "conic-gradient(" + stops.join(",") + ")"; const lg = el("div", "leg2");
+    f.categories.forEach((k, i) => { const r = el("div"), sw = el("i"); sw.style.background = COL[i % 8]; const v = el("span", "sens", " " + k.pct + "%"); v.dataset.rev = ""; r.append(sw, document.createTextNode(k.name), v); lg.append(r); }); ring.append(dn, lg); wrap.append(ring); }
+  if ((f.bills || []).length) { const bl = el("div", "bills"); f.bills.forEach(x => { const r = el("div", "bill"), amt = el("span", "sens", x.amount); amt.dataset.rev = "";
+      const days = isFinite(x.dueMs) ? Math.ceil((x.dueMs - Date.now()) / 864e5) : null, late = days != null && days < 0, due = el("b", late ? "late" : "", days == null ? (x.dueText || "") : late ? "overdue " + (-days) + "d" : days === 0 ? "today" : "in " + days + "d");
+      const right = el("span"); right.append(amt, document.createTextNode(" "), due); r.append(el("span", null, x.name), right); bl.append(r); }); wrap.append(bl); }
+  b.append(wrap);
+}
+function renderVitals() {
+  const b = clear($("vitBody")), v = M.vitals; $("vitSub").textContent = v ? v.src || "" : "";
+  if (!v) { b.append(el("div", "empty", "Waiting for the fitness bot's first report.")); return; }
+  const w = el("div", "vit"), body = el("div", "body");
+  body.innerHTML = '<svg viewBox="0 0 96 170"><g stroke="#19d3ff" stroke-width="1.3" fill="rgba(25,211,255,.06)" stroke-linejoin="round"><circle cx="48" cy="16" r="11"/><path d="M30 34 Q48 28 66 34 L74 76 L66 78 L62 56 L60 100 L64 160 L52 160 L48 108 L44 160 L32 160 L36 100 L34 56 L30 78 L22 76 Z"/></g><circle cx="48" cy="52" r="3" fill="#ff4d5e"><animate attributeName="r" values="3;6;3" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="48" cy="86" r="2.5" fill="#2ef2c8"/><circle cx="40" cy="130" r="2.5" fill="#7dff9a"/><circle cx="56" cy="130" r="2.5" fill="#7dff9a"/></svg><div class="scan"></div>';
+  const vs = el("div", "vs"), row = (k, val, cls) => { const r = el("div", "vr"); r.append(el("span", null, k), el("b", cls || "", val)); vs.append(r); };
+  if (v.steps != null) row("Steps", v.steps.toLocaleString() + (v.steps_goal ? " / " + v.steps_goal.toLocaleString() : "")); if (v.sleep_hours != null) row("Sleep", Math.floor(v.sleep_hours) + "h " + Math.round((v.sleep_hours % 1) * 60) + "m");
+  if (v.heart_rate != null) row("Heart", v.heart_rate + " bpm", "dn"); if (v.recovery != null) row("Recovery", v.recovery + "%", "up"); if (v.streak != null) row("Streak", v.streak + " days");
+  if (v.heart_rate != null) { const e = el("div"); e.innerHTML = '<svg class="ecg" viewBox="0 0 200 30" preserveAspectRatio="none"><path d="M0 15 H40 L46 15 L52 4 L58 26 L64 15 H110 L116 15 L122 4 L128 26 L134 15 H200"/></svg>'; vs.append(e); }
+  w.append(body, vs); b.append(w);
+}
+
+/* ================= layout ================= */
+const DESK = { colL: ["pNeed", "pRos", "pVit"], colC: ["pCore", "pNow", "pTl", "pHeat"], colR: ["pFeed", "pFin"] };
+const PHONE = { "s-brief": ["pNow", "pNeed", "pFeed", "pTl"], "s-bots": ["pCore", "pRos", "pHeat"], "s-money": ["pFin"], "s-body": ["pVit"] };
+function layout() { const map = mq.matches ? PHONE : DESK; for (const [host, ids] of Object.entries(map)) ids.forEach(id => $(host).append($(id))); measure(); sizeCanvas(); }
+function measure() { const r = document.documentElement.style, f = document.querySelector(".status").offsetHeight, t = $("tabs").offsetHeight || 40;
+  r.setProperty("--foot", f + "px"); r.setProperty("--chrome", (document.querySelector(".top").offsetHeight + (document.getElementById("band").offsetHeight || 0) + f + t + 4) + "px"); }
+mq.addEventListener("change", layout); addEventListener("resize", measure);
+
+/* ================= orbit canvas ================= */
+const cv = $("orbit"), cx2 = cv.getContext("2d"); let W = 600, H = 380, DPR = 1;
+function sizeCanvas() { const w = $("cw").clientWidth || 600; DPR = Math.min(devicePixelRatio || 1, 2); W = w; H = Math.round(w * (mq.matches ? .86 : .66));
+  cv.width = W * DPR; cv.height = H * DPR; cv.style.height = H + "px"; if (reduce) draw(performance.now()); }
+const colorOf = b => b.state === "silent" ? "#ff4d5e" : b.state === "waiting" ? "#6f93a8" : b.color;
+function draw(ts) {
+  const t = ts / 1000, c = cx2, alert = document.body.classList.contains("alert");
+  c.setTransform(DPR, 0, 0, DPR, 0, 0); c.clearRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2, RX = W / 2 - 46, RY = H / 2 - 30; c.lineWidth = 1;
+  OB.forEach(b => { c.strokeStyle = "rgba(25,211,255,.14)"; c.beginPath(); c.ellipse(cx, cy, RX * b.rf, RY * b.rf, 0, 0, 7); c.stroke(); });
+  const items = OB.map((b, i) => { const an = b.a + b.spd * t; return { b, i, x: cx + Math.cos(an) * RX * b.rf, y: cy + Math.sin(an) * RY * b.rf, z: (Math.sin(an) + 1) / 2 }; });
+  items.sort((a, b) => a.z - b.z); pos.length = 0;
+  const drawBot = it => { const silent = it.b.state === "silent", col = colorOf(it.b), r = 5 + 4 * it.z + (hover === it.i ? 3 : 0);
+    c.strokeStyle = col; c.globalAlpha = (silent ? .5 + .3 * Math.sin(t * 6) : .3) * .6; c.lineWidth = 1; c.beginPath(); c.moveTo(it.x, it.y); c.lineTo(cx, cy); c.stroke(); c.globalAlpha = 1;
+    const g = c.createRadialGradient(it.x, it.y, 0, it.x, it.y, r * 3.2); g.addColorStop(0, col + "cc"); g.addColorStop(1, col + "00"); c.fillStyle = g; c.beginPath(); c.arc(it.x, it.y, r * 3.2, 0, 7); c.fill();
+    c.fillStyle = "#031018"; c.strokeStyle = col; c.lineWidth = 2; c.beginPath(); c.arc(it.x, it.y, r, 0, 7); c.fill(); c.stroke();
+    c.fillStyle = hover === it.i ? "#fff" : "rgba(214,242,255,.85)"; c.font = "600 " + (10 + 2 * it.z) + "px ui-monospace,Menlo,monospace"; c.textAlign = "center"; c.fillText(it.b.id, it.x, it.y + r + 14);
+    pos[it.i] = { x: it.x, y: it.y, r: r + 8 }; };
+  items.filter(i => i.z < .5).forEach(drawBot);
+  const cr = Math.min(W, H) * .13 * (1 + .04 * Math.sin(t * 1.6));
+  ripples.forEach(r => { r.t += .016; c.strokeStyle = "rgba(25,211,255," + (.5 * (1 - r.t)) + ")"; c.lineWidth = 2; c.beginPath(); c.arc(cx, cy, cr + r.t * cr * 1.6, 0, 7); c.stroke(); });
+  for (let k = ripples.length - 1; k >= 0; k--) if (ripples[k].t >= 1) ripples.splice(k, 1);
+  const cg = c.createRadialGradient(cx - cr * .3, cy - cr * .3, 0, cx, cy, cr * 2.2);
+  cg.addColorStop(0, "#d9f8ff"); cg.addColorStop(.25, alert ? "#ffb020" : "#19d3ff"); cg.addColorStop(.6, alert ? "#7a4a00" : "#0a5b86"); cg.addColorStop(1, "rgba(5,20,34,0)");
+  c.fillStyle = cg; c.beginPath(); c.arc(cx, cy, cr * 2.2, 0, 7); c.fill();
+  c.strokeStyle = "rgba(25,211,255,.5)"; c.lineWidth = 1; c.setLineDash([3, 5]); c.beginPath(); c.ellipse(cx, cy, cr * 1.5, cr * 1.5 * .48, t * .5, 0, 7); c.stroke(); c.setLineDash([]);
+  c.fillStyle = "#031018"; c.font = "700 " + Math.max(9, cr * .26) + "px ui-monospace,Menlo,monospace"; c.textAlign = "center"; c.fillText(alert ? "ATTENTION" : "ONLINE", cx, cy + 3);
+  items.filter(i => i.z >= .5).forEach(drawBot);
+  pulses.forEach(p => { p.t += .014; const it = items.find(i => i.b.id === p.id); if (!it) { p.t = 2; return; } const x = it.x + (cx - it.x) * p.t, y = it.y + (cy - it.y) * p.t;
+    c.fillStyle = "#fff"; c.shadowColor = it.b.color; c.shadowBlur = 14; c.beginPath(); c.arc(x, y, 3, 0, 7); c.fill(); c.shadowBlur = 0; if (p.t >= 1 && !p.done) { p.done = true; ripples.push({ t: 0 }); } });
+  for (let k = pulses.length - 1; k >= 0; k--) if (pulses[k].t >= 1) pulses.splice(k, 1);
+}
+let run = !reduce; function loop(ts) { if (run) { draw(ts); requestAnimationFrame(loop); } }
+document.addEventListener("visibilitychange", () => { run = !reduce && !document.hidden; if (run) requestAnimationFrame(loop);
+  /*LIVE-START*/ if (!document.hidden) refresh(); /*LIVE-END*/ });
+cv.addEventListener("pointermove", e => { const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; hover = pos.findIndex(p => p && Math.hypot(p.x - x, p.y - y) < p.r);
+  const tip = $("tip"); if (hover >= 0) { tip.textContent = OB[hover].id + " · " + (OB[hover].note || OB[hover].state); tip.style.left = Math.min(x + 12, W - 190) + "px"; tip.style.top = (y - 30) + "px"; tip.style.opacity = 1; cv.style.cursor = "pointer"; } else { tip.style.opacity = 0; cv.style.cursor = "default"; } });
+cv.addEventListener("pointerleave", () => { hover = -1; $("tip").style.opacity = 0; });
+cv.addEventListener("click", () => { if (hover >= 0) { const b = OB[hover]; toast(b.id + " · " + (b.state === "waiting" ? "waiting for first report" : "last report " + ago(b.last) + " ago")); } });
+new ResizeObserver(() => sizeCanvas()).observe($("cw"));
+
+/* ================= actions ================= */
+async function onDecide(a, decision, node) {
+  const verb = decision === "approve" ? "Approved" : "Declined";
+  /*DEMO-START*/ if (!LIVE) { DEMO_NEEDS = DEMO_NEEDS.filter(x => x.id !== a.id); if (node) node.classList.add("gone"); toast(verb + " (demo)"); setTimeout(() => setModel(demoModel()), 300); return; } /*DEMO-END*/
+  /*LIVE-START*/
+  if (node) node.querySelectorAll("button").forEach(b => b.disabled = true);
+  try { const r = await api("/api/approvals/" + a.id + "/decide", { method: "POST", body: JSON.stringify({ decision }) }); toast(verb + " · " + a.bot + " notified (" + r.task.wake_status + ")"); }
+  catch (e) { toast(e.message === "auth" ? "Please sign in again" : e.message); }
+  refresh();
+  /*LIVE-END*/
 }
 function tick() { const n = new Date(); $("clk").textContent = n.toLocaleTimeString([], { hour12: false });
-  $("dt").textContent = n.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }
-$("demoChip").hidden = !DEMO;
-$("loginForm").addEventListener("submit", async e => { e.preventDefault(); try { await api("/login", { method: "POST", body: JSON.stringify({ password: $("pw").value }) }); $("pw").value = ""; load(); } catch (x) { $("loginMsg").textContent = x.message; } });
-$("signout").addEventListener("click", async () => { await api("/logout", { method: "POST" }); load(); });
-$("refresh").addEventListener("click", load);
-$("cmd").addEventListener("submit", async e => { e.preventDefault(); const m = $("cmdMsg");
-  if (DEMO) { m.textContent = "Demo mode: nothing was sent."; return; }
-  try { const r = await api("/api/tasks", { method: "POST", body: JSON.stringify({ bot: $("cmdBot").value, title: $("cmdTitle").value, detail: $("cmdDetail").value }) });
-    m.textContent = "Sent · " + r.wake_status; $("cmdTitle").value = ""; $("cmdDetail").value = ""; load(); } catch (x) { m.textContent = x.message; } });
-tick(); setInterval(tick, 1000); load();
-setInterval(() => { if (document.visibilityState === "visible" && !DEMO && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) load(); }, 60000);
+  $("dt").textContent = n.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const h = n.getHours(), who = LIVE ? M.owner : GUEST; $("greet").textContent = (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + (who ? ", " + who : ""); tickNow(); }
+function setPriv(on) { document.body.classList.toggle("priv", on); $("privBtn").textContent = "Privacy: " + (on ? "on" : "off"); document.querySelectorAll(".sens").forEach(s => s.classList.remove("show")); }
+$("privBtn").onclick = () => setPriv(!document.body.classList.contains("priv"));
+document.addEventListener("click", e => { const s = e.target.closest("[data-rev]"); if (s && document.body.classList.contains("priv")) { s.classList.add("show"); setTimeout(() => s.classList.remove("show"), 6000); } });
+/* palette */
+const goto = i => { if (mq.matches) $("screens").scrollTo({ left: $("screens").clientWidth * i, behavior: "smooth" }); else { const id = ["pNow", "pRos", "pFin", "pVit"][i]; $(id).scrollIntoView({ behavior: "smooth", block: "center" }); } };
+let CMDS = [{ label: "Open executive briefing", tag: "brief", run: () => openBrief() }, { label: "Toggle privacy blur", tag: "privacy", run: () => $("privBtn").click() },
+  { label: "Show brief", tag: "go", run: () => goto(0) }, { label: "Show bots", tag: "go", run: () => goto(1) }, { label: "Show money", tag: "go", run: () => goto(2) }, { label: "Show body", tag: "go", run: () => goto(3) }];
+/*DEMO-START*/ CMDS.push({ label: "Toggle alert preview", tag: "demo", run: () => $("pvToggle").click() }, { label: "New task for chief-of-staff", tag: "demo", run: () => toast("Would create a task (demo)") }); /*DEMO-END*/
+/*LIVE-START*/
+CMDS.push({ label: "Refresh now", tag: "sync", run: () => refresh() }, { label: "Sign out", tag: "account", run: async () => { await api("/logout", { method: "POST" }).catch(() => {}); refresh(); } });
+function liveCmds(q) { const m = /^task\s+(\S+)\s+(.+)$/i.exec(q.trim());
+  if (!m) return [{ label: "Tip: type  task <bot> <what to do>  to give a bot a task", tag: "tip", run: () => {} }];
+  const key = m[1].toLowerCase(), bot = M.bots.find(b => b.id === key) || M.bots.find(b => b.id.startsWith(key));
+  if (!bot) return [{ label: "No bot called “" + m[1] + "”. Bots: " + M.bots.map(b => b.id).join(", "), tag: "task", run: () => {} }];
+  return [{ label: "Give " + bot.id + " a task: " + m[2], tag: "task", run: async () => { try { const r = await api("/api/tasks", { method: "POST", body: JSON.stringify({ bot: bot.id, title: m[2].slice(0, 200) }) }); toast("Sent to " + bot.id + " (" + r.wake_status + ")"); refresh(); } catch (e) { toast(e.message); } } }]; }
+/*LIVE-END*/
+let sel = 0, shown = [];
+function palRender() { const q = $("palIn").value, ql = q.toLowerCase(), l = clear($("palList")); shown = CMDS.filter(c => c.label.toLowerCase().includes(ql));
+  /*LIVE-START*/ shown = liveCmds(q).concat(q.trim() ? shown : shown.slice(0, 5)); /*LIVE-END*/
+  sel = Math.min(sel, Math.max(0, shown.length - 1));
+  shown.forEach((c, i) => { const d = el("div", "pi" + (i === sel ? " sel" : ""), c.label); d.append(el("span", null, c.tag)); d.onclick = () => { closeAll(); c.run(); }; l.append(d); }); }
+function openPal() { $("pal").classList.add("open"); $("palIn").value = ""; sel = 0; palRender(); setTimeout(() => $("palIn").focus(), 30); }
+function closeAll() { document.querySelectorAll(".ov").forEach(o => o.classList.remove("open")); }
+function openBrief() { const l = clear($("briefList")); (M.brief.length ? M.brief : ["Nothing to report yet."]).forEach(x => l.append(el("li", null, x))); $("brief").classList.add("open"); }
+$("palBtn").onclick = openPal; $("ask").onclick = openPal; $("exec").onclick = openBrief; $("briefClose").onclick = closeAll;
+document.querySelectorAll(".ov").forEach(o => o.addEventListener("click", e => { if (e.target === o) closeAll(); }));
+$("palIn").addEventListener("input", () => { sel = 0; palRender(); });
+document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openPal(); return; }
+  if (e.key === "Escape") closeAll();
+  if ($("pal").classList.contains("open")) { if (e.key === "ArrowDown") { sel = Math.min(sel + 1, shown.length - 1); palRender(); e.preventDefault(); } if (e.key === "ArrowUp") { sel = Math.max(sel - 1, 0); palRender(); e.preventDefault(); }
+    if (e.key === "Enter" && shown[sel]) { const c = shown[sel]; closeAll(); c.run(); } } });
+const scr = $("screens"), tabs = [...document.querySelectorAll("#tabs button")];
+tabs.forEach(b => b.onclick = () => scr.scrollTo({ left: scr.clientWidth * +b.dataset.i, behavior: "smooth" }));
+scr.addEventListener("scroll", () => { const i = Math.round(scr.scrollLeft / scr.clientWidth); tabs.forEach((b, k) => b.classList.toggle("on", k === i)); }, { passive: true });
+if (!reduce) addEventListener("pointermove", e => { if (mq.matches || e.pointerType === "touch") return; document.body.style.setProperty("--mx", ((e.clientX / innerWidth) * 2 - 1).toFixed(2)); document.body.style.setProperty("--my", ((e.clientY / innerHeight) * 2 - 1).toFixed(2)); });
+
+/* ================= start ================= */
+/*DEMO-START*/
+if (!LIVE) {
+  if (MODE === "demo") { $("demoChip").hidden = false; }
+  const PV = MODE === "demo" ? "Try" : "Preview";
+  $("pvToggle").textContent = PV + ": trigger alert";
+  $("pvToggle").onclick = () => { demoAlert = !demoAlert; $("pvToggle").textContent = PV + (demoAlert ? ": clear alert" : ": trigger alert"); $("pvToggle").classList.toggle("on", demoAlert); setModel(demoModel()); };
+  if (MODE === "demo") $("hubSc").innerHTML = "● <b>Demo mode</b>";
+  setInterval(() => { if (document.hidden || !OB.length) return; const ok = OB.filter(b => b.state !== "silent"); if (ok.length) pulses.push({ id: ok[Math.floor(Math.random() * ok.length)].id, t: 0 }); }, 2200);
+  setInterval(() => { if (!document.hidden) setModel(demoModel()); }, 60000);
+  if (new URLSearchParams(location.search).has("alert")) demoAlert = true;
+}
+/*DEMO-END*/
+/*LIVE-START*/
+if (LIVE) {
+  $("wx").hidden = true;
+  $("loginForm").addEventListener("submit", async e => { e.preventDefault(); try { await api("/login", { method: "POST", body: JSON.stringify({ password: $("pw").value }) }); $("pw").value = ""; $("loginMsg").textContent = ""; refresh(); } catch (x) { $("loginMsg").textContent = x.message === "auth" ? "Wrong password" : x.message; } });
+  $("signout").onclick = async () => { await api("/logout", { method: "POST" }).catch(() => {}); refresh(); };
+  setInterval(() => { if (!document.hidden && !$("pal").classList.contains("open")) refresh(); }, 30000);
+}
+/*LIVE-END*/
+setPriv(false); layout();
+/*DEMO-START*/ if (!LIVE) setModel(demoModel()); /*DEMO-END*/
+/*LIVE-START*/ if (LIVE) { setModel(emptyModel()); refresh(); } /*LIVE-END*/
+tick(); setInterval(tick, 1000); setInterval(nextCdUpdate, 30000);
+if (reduce) draw(performance.now()); else requestAnimationFrame(loop);
 </script>
 </body>
 </html>

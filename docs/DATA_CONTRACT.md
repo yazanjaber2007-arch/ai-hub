@@ -26,6 +26,10 @@ Unknown or misspelled keys are rejected with a clear error, so nothing is silent
 }
 ```
 
+Times in `events[].at` can be `"14:00"` (read in the time zone of the browser showing the dashboard) or a full ISO
+timestamp with an offset, e.g. `"2026-11-17T14:00:00-05:00"`. Prefer the ISO form if you travel.
+Bill `due` dates are ISO dates (`"2026-11-19"`); anything else is shown as written.
+
 Limits: tiles ≤ 8, events ≤ 30, priorities ≤ 5, series ≤ 90 numbers, categories ≤ 8, bills ≤ 10, whole snapshot ≤ 60 KB.
 Amounts and balances are strings, already formatted by the bot.
 

@@ -10,6 +10,18 @@ A small service that sits between your Grok Bot team and Claude.
 Any bot whose name contains `dating` is refused at startup. Finance is allowed.
 What each bot sends is in [`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md).
 
+## Pages
+
+| Path | What | Login |
+|---|---|---|
+| `/command` | **The Command Center**: live bots, briefs, approvals, finance, vitals, timeline | yes |
+| `/` | The original plain dashboard (kept until you retire it) | yes |
+| `/demo` | Shareable demo with sample data. `?name=Alex` personalises the greeting | no |
+| `/preview` | The same demo with developer controls | no |
+
+`/command`, `/demo` and `/preview` are one source file (`app/static/command.html`) built three ways. The demo and preview
+builds have the live-data code (login, API calls, approvals) removed on the server, so they cannot touch your hub.
+
 ## Environment variables
 
 | Variable | Required | What |

@@ -201,34 +201,42 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     def index():
         return FileResponse(static / "index.html", headers={"Cache-Control": "no-store"})
 
-    @app.get("/command")
-    def command():
-        return FileResponse(static / "command.html", headers={"Cache-Control": "no-store"})
-
-    def _page(name: str, demo: bool, host: str) -> HTMLResponse:
-        """Static design pages. Hold no live data and never call the hub API."""
-        html = (static / name).read_text(encoding="utf-8")
+    def _page(mode: str, host: str = "") -> HTMLResponse:
+        """One source file, three builds. The demo and preview builds physically exclude the
+        live-data code (login, API calls, approvals), and the live build excludes the demo controls."""
+        html = (static / "command.html").read_text(encoding="utf-8")
+        drop = "DEMO" if mode == "live" else "LIVE"
+        html = re.sub(rf"/\*{drop}-START\*/.*?/\*{drop}-END\*/", "", html, flags=re.S)
+        html = re.sub(rf"<!--{drop}-->.*?<!--/{drop}-->", "", html, flags=re.S)
+        html = re.sub(r"/\*(?:LIVE|DEMO)-(?:START|END)\*/|<!--/?(?:LIVE|DEMO)-->", "", html)
+        html = html.replace('<html lang="en">', f'<html lang="en" data-mode="{mode}">', 1)
         head = '<meta name="robots" content="noindex,nofollow">'
-        if demo:
+        if mode == "live":
+            html = html.replace("<title>Command Center — Preview v2</title>", "<title>Command Center</title>", 1)
+        elif mode == "demo":
             safe = host if re.fullmatch(r"[A-Za-z0-9.\-]+(:\d+)?", host or "") else ""
             img = f"https://{safe}/demo/og.png" if safe else ""
             head += ('<meta property="og:title" content="Command Center: an AI dashboard demo">'
                      '<meta property="og:description" content="A Jarvis-style control panel for a team of AI assistants. Sample data only. Try the alert, the approvals and the command palette.">'
                      '<meta property="og:type" content="website">'
                      + (f'<meta property="og:image" content="{img}"><meta name="twitter:card" content="summary_large_image">' if img else ""))
-            html = html.replace('<html lang="en">', '<html lang="en" data-mode="demo">', 1)
             html = html.replace("<title>Command Center — Preview v2</title>", "<title>Command Center — Demo</title>", 1)
         return HTMLResponse(html.replace("<!--HEAD-->", head, 1),
                             headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"})
 
+    @app.get("/command")
+    def command():
+        # The page itself holds no data; everything comes from /api/dashboard after login.
+        return _page("live")
+
     @app.get("/preview")
-    def preview(request: Request):
-        return _page("preview.html", False, "")
+    def preview():
+        return _page("preview")
 
     @app.get("/demo")
     def demo(request: Request):
         # Public, shareable, sample data only. ?name=Alex personalises the greeting (handled in the browser).
-        return _page("preview.html", True, request.headers.get("host", ""))
+        return _page("demo", request.headers.get("host", ""))
 
     @app.get("/demo/og.png")
     def demo_og():

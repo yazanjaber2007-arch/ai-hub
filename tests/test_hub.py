@@ -219,16 +219,18 @@ def test_task_author_label(client):
     assert via_dashboard["created_by"] == "owner"
 
 
-def test_command_center_page_served_without_data(client):
+def test_command_center_live_page_holds_no_data_and_no_demo_controls(client):
     r = client.get("/command")
-    assert r.status_code == 200 and "<title>Command Center</title>" in r.text
-    assert "briefs" not in client.get("/command?demo=1").text.split("<script>")[0]  # page holds no live data
+    assert r.status_code == 200 and "<title>Command Center</title>" in r.text and 'data-mode="live"' in r.text
+    assert "/api/dashboard" in r.text and "trigger alert" not in r.text and "demoModel" not in r.text
+    assert "-START*/" not in r.text and "<!--LIVE" not in r.text and "<!--DEMO" not in r.text  # all build markers stripped
 
 
 def test_preview_page_is_static_demo(client):
     r = client.get("/preview")
     assert r.status_code == 200 and "Preview v2" in r.text
-    assert "/api/" not in r.text  # never calls the hub API
+    for forbidden in ("/api/", "/login", "/logout", "fetch(", "liveModel", "BOT_TOKEN"):
+        assert forbidden not in r.text, forbidden  # the demo build contains no live-data code at all
 
 
 # ================= Stage 1: snapshots, approvals, audit, grid, dashboard =================
@@ -380,7 +382,9 @@ def test_demo_page_is_public_noindex_and_shareable(client):
     assert "<title>Command Center — Demo</title>" in r.text and "Preview v2" not in r.text
     assert 'name="robots" content="noindex,nofollow"' in r.text and "noindex" in r.headers["x-robots-tag"]
     assert 'og:image" content="https://example.up.railway.app/demo/og.png"' in r.text
-    assert "/api/" not in r.text and "<!--HEAD-->" not in r.text
+    for forbidden in ("/api/", "/login", "fetch(", "liveModel"):
+        assert forbidden not in r.text, forbidden
+    assert "<!--HEAD-->" not in r.text
     assert client.get("/demo/og.png").headers["content-type"] == "image/png"
 
 

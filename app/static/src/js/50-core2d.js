@@ -40,12 +40,13 @@ const Core2D = (() => {
     bots.forEach(b => { c.strokeStyle = "rgba(25,211,255,.14)"; c.beginPath(); c.ellipse(cx, cy, RX * b.rf, RY * b.rf, 0, 0, 7); c.stroke(); });
     const items = bots.map((b, i) => { const an = b.a + b.spd * t; return { b, i, x: cx + Math.cos(an) * RX * b.rf, y: cy + Math.sin(an) * RY * b.rf, z: (Math.sin(an) + 1) / 2 }; });
     items.sort((a, b) => a.z - b.z); pos.length = 0;
+    const lab = [];                                                  // labels are drawn last, on top of the glow, nudged apart
     const drawBot = it => {
       const silent = it.b.state === "silent", col = colorOf(it.b), r = (5 + 4 * it.z + (hoverId === it.b.id ? 3 : 0)) * S;
       c.strokeStyle = col; c.globalAlpha = (silent ? .5 + .3 * Math.sin(t * 6) : .3) * .6; c.lineWidth = 1; c.beginPath(); c.moveTo(it.x, it.y); c.lineTo(cx, cy); c.stroke(); c.globalAlpha = 1;
       const g = c.createRadialGradient(it.x, it.y, 0, it.x, it.y, r * 3.2); g.addColorStop(0, col + "cc"); g.addColorStop(1, col + "00"); c.fillStyle = g; c.beginPath(); c.arc(it.x, it.y, r * 3.2, 0, 7); c.fill();
       c.fillStyle = "#031018"; c.strokeStyle = col; c.lineWidth = 2 * Math.sqrt(S); c.beginPath(); c.arc(it.x, it.y, r, 0, 7); c.fill(); c.stroke();
-      c.fillStyle = hoverId === it.b.id ? "#fff" : "rgba(219,244,255,.86)"; c.font = "600 " + ((10 + 2 * it.z) * S).toFixed(1) + "px 'JetBrains Mono',ui-monospace,Menlo,monospace"; c.textAlign = "center"; c.fillText(it.b.id, it.x, it.y + r + 15 * S);
+      lab.push({ it, r });
       pos[it.i] = { x: it.x, y: it.y, r: r + 9, id: it.b.id };
     };
     items.filter(i => i.z < .5).forEach(drawBot);
@@ -64,6 +65,16 @@ const Core2D = (() => {
       if (p.t >= 1 && !p.done) { p.done = true; ripples.push({ t: 0 }); }
     });
     for (let k = pulses.length - 1; k >= 0; k--) if (pulses[k].t >= 1) pulses.splice(k, 1);
+    // labels: nearest bots choose first; a label that would overlap another slides down instead; a dark halo keeps it readable over the glow
+    c.textAlign = "center"; c.lineJoin = "round"; const placed = [];
+    lab.sort((a, b) => b.it.z - a.it.z).forEach(({ it, r }) => {
+      const fs = (10 + 2 * it.z) * S, text = it.b.id; c.font = "600 " + fs.toFixed(1) + "px 'JetBrains Mono',ui-monospace,Menlo,monospace";
+      const w = c.measureText(text).width + 8 * S, h = fs * 1.2; let y = it.y + r + 15 * S;
+      for (let k = 0; k < 5; k++) { const x0 = it.x - w / 2, y0 = y - fs, hit = placed.some(p => x0 < p.x1 && x0 + w > p.x0 && y0 < p.y1 && y0 + h > p.y0); if (!hit) break; y += h + 2 * S; }
+      placed.push({ x0: it.x - w / 2, x1: it.x + w / 2, y0: y - fs, y1: y - fs + h });
+      c.lineWidth = 3 * S; c.strokeStyle = "rgba(3,10,18,.85)"; c.strokeText(text, it.x, y);
+      c.fillStyle = hoverId === it.b.id ? "#fff" : "rgba(219,244,255,.9)"; c.fillText(text, it.x, y);
+    });
   }
   const loop = ts => { if (running) { draw(ts); requestAnimationFrame(loop); } };
   const api = {

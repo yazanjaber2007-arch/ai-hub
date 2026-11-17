@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import contextlib
+import re
 import time
 from collections import defaultdict
 from pathlib import Path
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from itsdangerous import BadSignature, TimestampSigner
 from pydantic import BaseModel, Field
 
@@ -204,10 +205,34 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     def command():
         return FileResponse(static / "command.html", headers={"Cache-Control": "no-store"})
 
+    def _page(name: str, demo: bool, host: str) -> HTMLResponse:
+        """Static design pages. Hold no live data and never call the hub API."""
+        html = (static / name).read_text(encoding="utf-8")
+        head = '<meta name="robots" content="noindex,nofollow">'
+        if demo:
+            safe = host if re.fullmatch(r"[A-Za-z0-9.\-]+(:\d+)?", host or "") else ""
+            img = f"https://{safe}/demo/og.png" if safe else ""
+            head += ('<meta property="og:title" content="Command Center: an AI dashboard demo">'
+                     '<meta property="og:description" content="A Jarvis-style control panel for a team of AI assistants. Sample data only. Try the alert, the approvals and the command palette.">'
+                     '<meta property="og:type" content="website">'
+                     + (f'<meta property="og:image" content="{img}"><meta name="twitter:card" content="summary_large_image">' if img else ""))
+            html = html.replace('<html lang="en">', '<html lang="en" data-mode="demo">', 1)
+            html = html.replace("<title>Command Center — Preview v2</title>", "<title>Command Center — Demo</title>", 1)
+        return HTMLResponse(html.replace("<!--HEAD-->", head, 1),
+                            headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"})
+
     @app.get("/preview")
-    def preview():
-        # Design preview with demo data only; holds no live data and needs no login.
-        return FileResponse(static / "preview.html", headers={"Cache-Control": "no-store"})
+    def preview(request: Request):
+        return _page("preview.html", False, "")
+
+    @app.get("/demo")
+    def demo(request: Request):
+        # Public, shareable, sample data only. ?name=Alex personalises the greeting (handled in the browser).
+        return _page("preview.html", True, request.headers.get("host", ""))
+
+    @app.get("/demo/og.png")
+    def demo_og():
+        return FileResponse(static / "og.png", media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
 
     # MCP last, so it doesn't shadow the routes above. Endpoint: /mcp
     app.mount("/", BearerMiddleware(mcp.streamable_http_app()))

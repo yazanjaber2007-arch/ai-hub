@@ -372,3 +372,24 @@ def test_mcp_snapshot_and_approval(client2):
     adm = call_tool(client2, ADMIN, "list_approvals", {})
     assert "Move $500" in json.dumps(adm)
     assert call_tool(client2, FIN, "list_approvals", {})["isError"]  # bots cannot read the queue
+
+
+def test_demo_page_is_public_noindex_and_shareable(client):
+    r = client.get("/demo", headers={"host": "example.up.railway.app"})
+    assert r.status_code == 200 and 'data-mode="demo"' in r.text
+    assert "<title>Command Center — Demo</title>" in r.text and "Preview v2" not in r.text
+    assert 'name="robots" content="noindex,nofollow"' in r.text and "noindex" in r.headers["x-robots-tag"]
+    assert 'og:image" content="https://example.up.railway.app/demo/og.png"' in r.text
+    assert "/api/" not in r.text and "<!--HEAD-->" not in r.text
+    assert client.get("/demo/og.png").headers["content-type"] == "image/png"
+
+
+def test_demo_never_reflects_a_hostile_host_header(client):
+    r = client.get("/demo", headers={"host": 'evil.com"><script>alert(1)</script>'})
+    assert "<script>alert(1)" not in r.text and "og:image" not in r.text
+
+
+def test_preview_is_not_demo_and_not_indexed(client):
+    r = client.get("/preview")
+    assert 'data-mode="demo"' not in r.text and "noindex" in r.headers["x-robots-tag"]
+    assert "setPriv(false)" in r.text  # finance is shown by default

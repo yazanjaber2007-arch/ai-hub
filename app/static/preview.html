@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050b14">
 <title>Command Center — Preview v2</title>
+<!--HEAD-->
 <style>
 :root{
   color-scheme:dark;
@@ -36,6 +37,7 @@ body.alert #band{display:flex}
 .chip{font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:7px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);display:inline-flex;gap:8px;align-items:center;color:var(--ink)}
 .chip .d{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal)}
 body.alert .chip.sys .d{background:var(--red);box-shadow:0 0 8px var(--red);animation:blink 1s infinite}
+.chip.democ{color:var(--amber);border-color:rgba(255,176,32,.45)}
 .chip.btn:hover{border-color:var(--line-hi);background:rgba(25,211,255,.12)}
 .chip.on{border-color:var(--amber);color:var(--amber)}
 .clock{margin:0 auto;text-align:center}
@@ -203,9 +205,10 @@ svg.spark{width:100%;height:62px}
 <header class="top">
   <div class="brand"><i></i><span>Command</span></div>
   <span class="chip sys"><span class="d"></span><span class="hide-m">System status:&nbsp;</span><span id="sysTxt">optimal</span></span>
+  <span class="chip democ" id="demoChip" hidden>Demo · sample data</span>
   <div class="clock"><div class="t" id="clk">--:--:--</div><div class="dt" id="dt">&nbsp;</div></div>
   <button class="chip btn hide-m" id="pvToggle" title="Preview control">Preview: trigger alert</button>
-  <button class="chip btn" id="privBtn" title="Hide or show finance numbers">Privacy: on</button>
+  <button class="chip btn" id="privBtn" title="Hide or show finance numbers">Privacy: off</button>
   <button class="chip btn hide-m" id="palBtn">Search / command <kbd>Ctrl K</kbd></button>
 </header>
 
@@ -216,7 +219,7 @@ svg.spark{width:100%;height:62px}
 <footer class="status">
   <div class="sc x">☁ <b>18°C</b> clear</div>
   <div class="sc">▶ <span id="nextTxt">Next: Investor call</span> <b id="nextCd">in 2h 12m</b></div>
-  <div class="sc x">● Hub <b>online</b></div>
+  <div class="sc x" id="hubSc">● Hub <b>online</b></div>
   <button class="ask" id="ask"><span class="w"><i></i><i></i><i></i><i></i><i></i></span><span>Ask or command…</span><kbd>Ctrl K</kbd></button>
   <button class="chip btn" id="exec"><span class="hide-m">Executive briefing</span><span class="only-m">Brief</span></button>
 </footer>
@@ -255,6 +258,9 @@ svg.spark{width:100%;height:62px}
 "use strict";
 const $ = id => document.getElementById(id);
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const DEMO = document.documentElement.dataset.mode === "demo";
+const GUEST = DEMO ? (new URLSearchParams(location.search).get("name") || "").replace(/[^\p{L}\p{N} .'\-]/gu, "").trim().slice(0, 24) : "";
+const PV = DEMO ? "Try" : "Preview";
 const mq = matchMedia("(max-width:820px)");
 const reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
 const toast = m => { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 1800); };
@@ -383,12 +389,12 @@ new ResizeObserver(() => sizeCanvas()).observe($("cw"));
 /* ---------- interactions ---------- */
 function tick() { const n = new Date(); $("clk").textContent = n.toLocaleTimeString([], { hour12: false });
   $("dt").textContent = n.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  const h = n.getHours(); $("greet").textContent = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  const h = n.getHours(); $("greet").textContent = (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + (GUEST ? ", " + GUEST : "");
   const left = Math.max(0, tick.end - Date.now()), s = Math.floor(left / 1000), p = v => String(v).padStart(2, "0");
   $("nowCd").textContent = p(Math.floor(s / 3600)) + ":" + p(Math.floor(s % 3600 / 60)) + ":" + p(s % 60); }
 tick.end = Date.now() + 38 * 60000;
 function setAlert(on) { document.body.classList.toggle("alert", on); $("sysTxt").textContent = on ? "1 bot silent" : "optimal";
-  $("pvToggle").textContent = on ? "Preview: clear alert" : "Preview: trigger alert"; $("pvToggle").classList.toggle("on", on); $("headline").textContent = on ? "Finance has gone quiet. Everything else is fine." : "3 things need you today. Everything else is handled."; renderRoster(); if (reduce) draw(performance.now()); }
+  $("pvToggle").textContent = on ? PV + ": clear alert" : PV + ": trigger alert"; $("pvToggle").classList.toggle("on", on); $("headline").textContent = on ? "Finance has gone quiet. Everything else is fine." : "3 things need you today. Everything else is handled."; renderRoster(); if (reduce) draw(performance.now()); }
 $("pvToggle").onclick = () => setAlert(!document.body.classList.contains("alert"));
 function setPriv(on) { document.body.classList.toggle("priv", on); $("privBtn").textContent = "Privacy: " + (on ? "on" : "off"); document.querySelectorAll(".sens").forEach(s => s.classList.remove("show")); }
 $("privBtn").onclick = () => setPriv(!document.body.classList.contains("priv"));
@@ -415,7 +421,8 @@ scr.addEventListener("scroll", () => { const i = Math.round(scr.scrollLeft / scr
 /* glass-wall parallax */
 if (!reduce) addEventListener("pointermove", e => { if (mq.matches || e.pointerType === "touch") return; document.body.style.setProperty("--mx", ((e.clientX / innerWidth) * 2 - 1).toFixed(2)); document.body.style.setProperty("--my", ((e.clientY / innerHeight) * 2 - 1).toFixed(2)); });
 
-renderRoster(); renderNeeds(); renderFeed(); renderTimeline(); renderHeat(); setPriv(true); layout(); tick(); setInterval(tick, 1000); setInterval(renderTimeline, 60000);
+renderRoster(); renderNeeds(); renderFeed(); renderTimeline(); renderHeat(); setPriv(false); layout(); tick(); setInterval(tick, 1000); setInterval(renderTimeline, 60000);
+if (DEMO) { $("demoChip").hidden = false; $("hubSc").innerHTML = "● <b>Demo mode</b>"; $("pvToggle").textContent = "Try: trigger alert"; }
 if (new URLSearchParams(location.search).has("alert")) setAlert(true);
 if (reduce) draw(performance.now()); else requestAnimationFrame(loop);
 </script>

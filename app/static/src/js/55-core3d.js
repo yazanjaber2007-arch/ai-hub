@@ -9,7 +9,10 @@ const Core = (() => {
   let holo = null, loading = null, bots = [], alert = false, failed = tabStore.get("coreFail", null), active3d = false, firstFrame = false, zoomVal = 0.9;       // 0.9: frame the scene a little tighter than "everything fits"
 
   const pref = () => store.get("core", "auto");
-  const want3d = () => { const p = pref(); return p === "2d" ? false : p === "3d" ? true : (!MQ_PHONE.matches && !failed); };
+  const SLOW_PAUSE = 30 * 60 * 1000, slowNow = () => Date.now() < store.get("coreSlow", 0);     // after "too slow", stay flat for 30 minutes, then try again
+  const want3d = () => { const p = pref(); return p === "2d" ? false : p === "3d" ? true : (!MQ_PHONE.matches && !failed && !slowNow()); };
+  const level0 = store.get("coreLevel", 0);
+  if (level0 >= 1) document.documentElement.classList.add("lite");                          // a slow device keeps the lighter page from the first frame
 
   function loadBundle() {
     return new Promise((resolve, reject) => {
@@ -30,11 +33,16 @@ const Core = (() => {
     loading = loadBundle().then(H => {
       if (!H.supported()) throw new Error("WebGL 2 unavailable");
       holo = H.create($("holo"), {
-        adapt: !IS_AUTOMATED, staticFrame: reduced(), dprCap: 2, autoIntro: !(Boot.running && !Boot.revealed),   // during the boot, the reveal triggers the intro
+        adapt: !IS_AUTOMATED, staticFrame: reduced(), dprCap: 1.5, startLevel: level0, autoIntro: !(Boot.running && !Boot.revealed),   // during the boot, the reveal triggers the intro
         onHover: (id, x, y) => { bus.emit("hover", id); if (id) { const b = bots.find(q => q.id === id); Tip.show(x, y, Names.full(id) + " · " + safeNote(b || { note: "", state: "" })); } else Tip.hide(); },
         onSelect: id => bus.emit("select", id),
         onReady: () => { firstFrame = true; bus.emit("core:frame"); },
-        onFallback: reason => { console.warn("3D core fallback:", reason); tabStore.set("coreFail", String(reason)); failed = String(reason); hide3d(); },
+        onDegrade: lvl => { store.set("coreLevel", lvl); document.documentElement.classList.add("lite"); console.info("3D core: lighter settings, level", lvl); },
+        onFallback: reason => {
+          console.warn("3D core fallback:", reason); bus.emit("core:fallback", reason);
+          if (reason === "too slow") store.set("coreSlow", Date.now() + SLOW_PAUSE); else { tabStore.set("coreFail", String(reason)); failed = String(reason); }
+          hide3d(); toast("Core switched to the flat view (" + reason + "). Search or command, then “Core: 3D hologram”, to retry.", 6500);
+        },
       });
       holo.setBots(bots); holo.setAlert(alert); holo.setZoom(zoomVal);
       show3d(); bus.emit("core:ready");
@@ -58,7 +66,7 @@ const Core = (() => {
     pulse(id) { Core2D.pulse(id); if (holo && active3d) holo.pulse(id); },
     intro() { if (holo && active3d) holo.intro(); },
     resize() { Core2D.resize(); if (holo) holo.resize(); },
-    setPref(p) { store.set("core", p); if (p !== "auto") { failed = null; tabStore.set("coreFail", null); } sync(); toast(p === "3d" ? "Core: 3D hologram" : p === "2d" ? "Core: flat 2D" : "Core: automatic"); },
+    setPref(p) { store.set("core", p); if (p !== "2d") { failed = null; tabStore.set("coreFail", null); store.set("coreSlow", 0); store.set("coreLevel", 0); document.documentElement.classList.remove("lite"); } sync(); toast(p === "3d" ? "Core: 3D hologram" : p === "2d" ? "Core: flat 2D" : "Core: automatic"); },
     fpsCap(n) { if (holo) holo.setFpsCap(n); },
     zoom(z) { zoomVal = z; if (holo) holo.setZoom(z); },
   };

@@ -61,3 +61,10 @@
   .panel{padding:12px 12px 14px}
   .hr{grid-template-columns:70px minmax(0,1fr)}
 }
+
+/* "lite": the page drops its heaviest effects when this device could not keep up (set by the 3D core's quality ladder) */
+html.lite .panel,html.lite .status,html.lite .acard,html.lite .toast,html.lite .core-pill,html.lite .ov,html.lite #login{-webkit-backdrop-filter:none;backdrop-filter:none}
+html.lite .panel{background:linear-gradient(180deg,rgba(14,36,58,.93),rgba(7,20,34,.9))}
+html.lite .status{background:rgba(4,11,19,.96)}
+html.lite #bg::after,html.lite .rn::after,html.lite .brand-mark::before,html.lite .rb .gl::after,html.lite .rb .gl svg,html.lite .wave i,html.lite .tl .pg i{animation:none}
+html.lite .col{will-change:auto}

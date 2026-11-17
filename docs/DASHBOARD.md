@@ -69,6 +69,14 @@ countdown, today's priorities, and a slow carousel of feed items, approvals and 
 - No WebGL, a lost graphics context, or a slow device: the core falls back to the flat 2D canvas automatically.
 - Text is at least 12px; changing numbers use tabular figures and count smoothly to their new value.
 
+## If the 3D core looks flat
+
+The core protects itself on slow or odd graphics hardware, in this order: the page drops its blurred glass and drifting light ("lite"),
+then bloom, then pixel ratio, then antialiasing, and only then does it switch to the flat core. A slow device remembers its level, so
+it starts light next time; "too slow" pauses 3D for 30 minutes and then tries again. A canvas that draws nothing (three empty
+readbacks) or a lost graphics context falls back for the rest of the tab. Every switch shows a message saying why.
+To retry at once: Search or command, then **Core: 3D hologram**. Pages running at 30 fps (a battery saver) are not treated as slow.
+
 ## What the 3D core shows
 
 The center is the hub; every bot is a satellite on its own orbit. A bot that reports sends a pulse to the core. Silent bots turn red,

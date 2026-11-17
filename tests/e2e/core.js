@@ -33,6 +33,28 @@ let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : fail++; console.log(
   ok(await p.evaluate(() => /drew nothing/.test(sessionStorage.getItem('hub.coreFail') || '')), 'the failure is remembered, so the next load goes straight to 2D');
   await ctx.close();
 
+  // 2b. a slow device: the quality ladder lightens the page first, remembers the level, and only then gives up (for 30 minutes, not for good)
+  ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+  p = await ctx.newPage(); await p.goto(HUB + '/demo?boot=0'); await p.waitForFunction(() => window.__hub && window.__hub.Core.holo, null, { timeout: 30000 });
+  await p.evaluate(() => window.__hub.Core.holo.forceDegrade());
+  ok(await p.evaluate(() => document.documentElement.classList.contains('lite') && localStorage.getItem('hub.coreLevel') === '1' && window.__hub.Core.is3d), 'step 1: the page goes lite (no blurred glass), 3D keeps running, the level is remembered');
+  ok(await p.evaluate(() => getComputedStyle(document.getElementById('pNeed')).backdropFilter === 'none'), 'lite mode removes the backdrop blur');
+  await p.evaluate(() => { const H = window.__hub.Core.holo; H.forceDegrade(); H.forceDegrade(); H.forceDegrade(); });
+  const s4 = await p.evaluate(() => window.__hub.Core.holo.getStats());
+  ok(s4.level === 4 && s4.bloom === false && s4.dpr === 1, 'steps 2-4: bloom off, pixel ratio 1, no MSAA (level ' + s4.level + ')');
+  await p.evaluate(() => window.__hub.Core.holo.forceDegrade()); await p.waitForTimeout(500);
+  ok(await p.evaluate(() => !window.__hub.Core.is3d && Number(localStorage.getItem('hub.coreSlow')) > Date.now() && !sessionStorage.getItem('hub.coreFail')), 'step 5: flat core, paused for 30 minutes (not stuck for the whole tab)');
+  ok(/flat view/.test(await p.textContent('#toast')), 'the switch is announced, with how to retry');
+  await p.evaluate(() => window.__hub.Core.setPref('3d')); await p.waitForTimeout(1500);
+  ok(await p.evaluate(() => window.__hub.Core.is3d && localStorage.getItem('hub.coreLevel') === '0' && !document.documentElement.classList.contains('lite')), '"Core: 3D hologram" retries from scratch');
+  await ctx.close();
+  ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+  await ctx.addInitScript(() => { try { localStorage.setItem('hub.coreLevel', '2'); } catch (e) {} });
+  p = await ctx.newPage(); await p.goto(HUB + '/demo?boot=0'); await p.waitForFunction(() => window.__hub && window.__hub.Core.holo, null, { timeout: 30000 });
+  const sl = await p.evaluate(() => ({ ...window.__hub.Core.holo.getStats(), lite: document.documentElement.classList.contains('lite') }));
+  ok(sl.level === 2 && sl.bloom === false && sl.lite, 'a device that was slow starts on its remembered level (level ' + sl.level + ')');
+  await ctx.close();
+
   // 3. phones keep the 2D core and never download the 3D bundle
   ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   p = await ctx.newPage(); const reqs = []; p.on('request', r => reqs.push(r.url())); await p.goto(HUB + '/demo?boot=0'); await p.waitForTimeout(2500);

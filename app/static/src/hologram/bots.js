@@ -47,7 +47,7 @@ export class BotLayer {
 
     const label = document.createElement("div"); label.className = "hl";
     const ns = "http://www.w3.org/2000/svg", s = document.createElementNS(ns, "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.innerHTML = spec.glyph || ""; label.appendChild(s);
-    const name = document.createElement("span"); name.textContent = spec.id; label.appendChild(name); this.host.appendChild(label);
+    const name = document.createElement("span"); name.textContent = spec.name || spec.id; label.appendChild(name); this.host.appendChild(label);
 
     return {
       id: spec.id, g, node, nodeMat, halo, haloMat, burst, burstMat, orbit, orbitMat, beam, beamMat, label, color, eff: color.clone(),

@@ -26,8 +26,8 @@ const Boot = (() => {
     }, per);
     timers.push(id);
   }
-  function line(txt, state, cls) {
-    const d = el("div", "bl" + (cls ? " " + cls : "")); d.append(el("span", "", txt), el("i"), el("b", "", state || ""));
+  function line(txt, state, cls, role) {
+    const d = el("div", "bl" + (cls ? " " + cls : "")); const lab = el("span", "", txt); if (role) lab.append(el("small", "", role)); d.append(lab, el("i"), el("b", "", state || ""));
     $("bootLines").append(d);
   }
   function botState(b) {
@@ -65,7 +65,7 @@ const Boot = (() => {
     const elapsed = performance.now() - t0; let n = 0, last = 0;
     const at = (off, fn) => { const when = Math.max(off - elapsed, n++ * 45); last = Math.max(last, when); later(fn, when); };
     at(T.lines, () => line("Uplink established", "ok"));
-    shown.forEach((b, i) => { const [s, c] = botState(b); at(T.bot + i * T.step, () => line(b.id, s, c)); });
+    shown.forEach((b, i) => { const [s, c] = botState(b); at(T.bot + i * T.step, () => line(b.name, s, c, b.role)); });
     if (over) at(T.bot + 4 * T.step, () => line("+" + (bots.length - 4) + " more", "online"));
     at(T.bot + Math.max(shown.length + (over ? 1 : 0), 1) * T.step, () => line("All systems nominal", "ok"));
     // reveal on the chime, but not before the 3D core has drawn its first frame (its shader compile would stutter the reveal)

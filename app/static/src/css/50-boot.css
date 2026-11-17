@@ -75,3 +75,7 @@ html.reveal .panel,html.reveal .rn{animation:rv var(--d-slow) var(--ease) both;a
 html.reveal .top,html.reveal .status,html.reveal #tabs{animation:fade-up 700ms var(--ease) both}
 @keyframes rv{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes fade-up{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* boot log: the god's name, with the job beside it */
+.bl small{margin-left:.8em;font-size:.85em;letter-spacing:.1em;color:var(--mute)}
+.boot-lines{width:min(420px,calc(100vw - 48px))}

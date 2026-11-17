@@ -31,7 +31,7 @@ const Core = (() => {
       if (!H.supported()) throw new Error("WebGL 2 unavailable");
       holo = H.create($("holo"), {
         adapt: !IS_AUTOMATED, staticFrame: reduced(), dprCap: 2, autoIntro: !(Boot.running && !Boot.revealed),   // during the boot, the reveal triggers the intro
-        onHover: (id, x, y) => { bus.emit("hover", id); if (id) { const b = bots.find(q => q.id === id); Tip.show(x, y, id + " · " + safeNote(b || { note: "", state: "" })); } else Tip.hide(); },
+        onHover: (id, x, y) => { bus.emit("hover", id); if (id) { const b = bots.find(q => q.id === id); Tip.show(x, y, Names.full(id) + " · " + safeNote(b || { note: "", state: "" })); } else Tip.hide(); },
         onSelect: id => bus.emit("select", id),
         onReady: () => { firstFrame = true; bus.emit("core:frame"); },
         onFallback: reason => { console.warn("3D core fallback:", reason); tabStore.set("coreFail", String(reason)); failed = String(reason); hide3d(); },
@@ -50,7 +50,7 @@ const Core = (() => {
     get holo() { return holo; },
     sync, enable3d,
     update(m) {
-      bots = m.bots.map(b => ({ id: b.id, color: b.color, state: b.state, note: b.note, last: b.last, glyph: b.glyph, sens: b.sens }));
+      bots = m.bots.map(b => ({ id: b.id, name: b.name, color: b.color, state: b.state, note: b.note, last: b.last, glyph: b.glyph, sens: b.sens }));
       alert = !!m.alert;
       Core2D.setBots(bots); Core2D.setAlert(alert);
       if (holo) { holo.setBots(bots); holo.setAlert(alert); }
@@ -63,7 +63,7 @@ const Core = (() => {
     zoom(z) { zoomVal = z; if (holo) holo.setZoom(z); },
   };
 
-  bus.on("hover", id => { Core2D.setHover(id); if (holo) holo.setHover(id); $$("#rosList .rb").forEach(r => r.classList.toggle("hl", r.dataset.k === id)); });
+  bus.on("hover", id => { Core2D.setHover(id); if (holo) holo.setHover(id); $$("#rosList .rb").forEach(r => r.classList.toggle("lit", r.dataset.k === id)); });
   bus.on("bot:report", id => api.pulse(id));
   new ResizeObserver(() => api.resize()).observe(cw);
   MQ_PHONE.addEventListener("change", () => sync());

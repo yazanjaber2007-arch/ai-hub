@@ -25,7 +25,7 @@ const Ambient = (() => {
     return { next, prios, feed, needs, needN: (m.needs || []).length, metrics, bots: m.bots || [], headline: m.headline || "", owner: LIVE ? m.owner : GUEST };
   }
   const sig = v => JSON.stringify([v.next && [v.next.key, v.next.text, v.next.note], v.prios, v.feed.map(f => [f.key, f.tag, f.title, f.body]), v.needs, v.needN,
-    v.metrics.map(g => [g.bot, g.tiles.map(t => t.label + t.value)]), v.bots.map(b => [b.id, b.state]), v.headline, v.owner]);
+    v.metrics.map(g => [g.bot, g.tiles.map(t => t.label + t.value)]), v.bots.map(b => [b.id, b.name, b.state]), v.headline, v.owner]);
 
   /* ---------- building blocks ---------- */
   const card = (label, ...kids) => { const c = el("div", "acard"); c.append(el("div", "ak", label), ...kids); return c; };
@@ -51,7 +51,7 @@ const Ambient = (() => {
   }
   function metricCard(g) {
     const box = el("div", "ametric"); g.tiles.slice(0, 5).forEach(t => { const r = el("div"); r.append(el("span", "", t.label), el("b", t.trend || "", t.value)); box.append(r); });
-    return card(g.bot, box);
+    return card(g.name ? g.name + (g.role ? " · " + g.role : "") : g.bot, box);
   }
 
   /* ---------- render (only when the visible content changed) ---------- */
@@ -68,7 +68,7 @@ const Ambient = (() => {
     const right = clear($("ambRight")), car = el("div", "acar"); cards.forEach(c => car.append(c));
     if (cards.length) { right.append(car); cur = Math.min(cur, cards.length - 1); show(cur); }
     const bar = clear($("ambBar"));
-    v.bots.forEach(b => { const d = el("span", "bd"); d.dataset.state = b.state; d.append(el("i"), document.createTextNode(b.id)); bar.append(d); });
+    v.bots.forEach(b => { const d = el("span", "bd"); d.dataset.state = b.state; d.append(el("i"), document.createTextNode(b.name || b.id)); bar.append(d); });
     ref.sync = el("span", "sync"); bar.append(ref.sync); tickClock(true);
   }
   function show(i) {

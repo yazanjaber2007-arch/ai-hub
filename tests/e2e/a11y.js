@@ -20,6 +20,17 @@ let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : fail++; console.log(
   await p.keyboard.press('Enter'); await p.waitForTimeout(700); ok((await active()) === 'ambBtn', 'ambient: leaving returns focus to the ambient button');
   ok(p.errs.length === 0, 'no errors (' + p.errs.join('|') + ')');
 
+  // roster: god names with the job in plain words; hovering a row must never move it (regression: a class clash threw the row out of the layout)
+  const names = await p.$$eval('#rosList .rb', rows => rows.map(r => r.querySelector('.nm').textContent + '|' + r.querySelector('.role').textContent));
+  ok(names.includes('Zeus|Chief of staff') && names.includes('Hermes|Inbox') && names.includes('Apollo|Social growth'), 'roster shows god names with their roles ' + JSON.stringify(names));
+  const moved = [];
+  for (const row of await p.$$('#rosList .rb')) {
+    const before = await row.boundingBox(); await row.hover(); await p.waitForTimeout(350);
+    const after = await row.boundingBox(), pos = await row.evaluate(e => getComputedStyle(e).position);
+    if (Math.abs(before.y - after.y) > 1.5 || Math.abs(before.x - after.x) > 1.5 || pos === 'absolute') moved.push(before.y + '->' + after.y + ' ' + pos);
+  }
+  ok(moved.length === 0, 'hovering roster rows does not move them ' + JSON.stringify(moved));
+
   // every control reachable, named and visibly focusable; text >= 12px
   const audit = await p.evaluate(() => {
     const vis = e => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };

@@ -41,17 +41,17 @@ const Palette = (() => {
       { label: "Show brief", tag: "go", run: () => goto(0) }, { label: "Show bots", tag: "go", run: () => goto(1) },
       { label: "Show money", tag: "go", run: () => goto(2) }, { label: "Show body", tag: "go", run: () => goto(3) },
     ];
-    /*DEMO-START*/ c.push({ label: "Toggle alert preview", tag: "demo", run: () => $("pvToggle").click() }, { label: "New task for chief-of-staff", tag: "demo", run: () => Actions.task() }); /*DEMO-END*/
+    /*DEMO-START*/ c.push({ label: "Toggle alert preview", tag: "demo", run: () => $("pvToggle").click() }, { label: "New task for Zeus", tag: "demo", run: () => Actions.task() }); /*DEMO-END*/
     /*LIVE-START*/ c.push({ label: "Refresh now", tag: "sync", run: () => refresh() }, { label: "Sign out", tag: "account", run: async () => { await api("/logout", { method: "POST" }).catch(() => {}); refresh(); } }); /*LIVE-END*/
     return c;
   };
   /*LIVE-START*/
   function liveCmds(q) {
     const m = /^task\s+(\S+)\s+(.+)$/i.exec(q.trim());
-    if (!m) return [{ label: "Tip: type  task <bot> <what to do>  to give a bot a task", tag: "tip", run: () => {} }];
-    const key = m[1].toLowerCase(), bot = M.bots.find(b => b.id === key) || M.bots.find(b => b.id.startsWith(key));
-    if (!bot) return [{ label: "No bot called “" + m[1] + "”. Bots: " + M.bots.map(b => b.id).join(", "), tag: "task", run: () => {} }];
-    return [{ label: "Give " + bot.id + " a task: " + m[2], tag: "task", run: () => Actions.task(bot.id, m[2]) }];
+    if (!m) return [{ label: "Tip: type  task <name> <what to do>  (e.g. task zeus …) to give a bot a task", tag: "tip", run: () => {} }];
+    const bot = Names.find(m[1]);                            // by god name, role or slug: "task zeus ...", "task inbox ..."
+    if (!bot) return [{ label: "No bot called “" + m[1] + "”. Bots: " + M.bots.map(b => b.name).join(", "), tag: "task", run: () => {} }];
+    return [{ label: "Give " + bot.name + " (" + (bot.role || bot.id) + ") a task: " + m[2], tag: "task", run: () => Actions.task(bot.id, m[2]) }];
   }
   /*LIVE-END*/
   function render() {

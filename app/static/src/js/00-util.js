@@ -43,6 +43,23 @@ const bus = (() => {
   };
 })();
 
+/* ---------- bot display names: Greek gods with plain-words roles; ids stay the slugs ---------- */
+const Names = (() => {
+  let m = new Map();
+  const get = id => m.get(id) || {};
+  return {
+    set(bots) { m = new Map(bots.map(b => [b.id, b])); },
+    name: id => get(id).name || id,
+    role: id => get(id).role || "",
+    full: id => (get(id).name || id) + (get(id).role ? " · " + get(id).role : ""),
+    /* "zeus", "chief", "chief-of-staff", "Hermes" all find the bot */
+    find(q) {
+      q = String(q).trim().toLowerCase(); if (!q) return null; const all = [...m.values()];
+      return all.find(b => b.id === q || (b.name || "").toLowerCase() === q) || all.find(b => b.id.startsWith(q) || (b.name || "").toLowerCase().startsWith(q) || (b.role || "").toLowerCase().startsWith(q)) || null;
+    },
+  };
+})();
+
 /* ---------- constants ---------- */
 const PALETTE = ["#19d3ff", "#2ef2c8", "#8a7dff", "#7dff9a", "#ffb020", "#ff7ab6", "#ffd166"];
 const GL = {

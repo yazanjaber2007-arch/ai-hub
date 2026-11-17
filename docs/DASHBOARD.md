@@ -16,6 +16,16 @@
 The palette also switches the core between the **3D hologram** (default on desktop) and the **flat 2D** version (default on phones,
 and the automatic fallback when WebGL is missing or the device is too slow).
 
+## Bot names
+
+Every bot has a Greek god's name and its job in plain words: **Zeus** (chief of staff), **Hermes** (inbox), **Apollo** (social growth),
+**Heracles** (fitness), **Plutus** (finance), **Hestia** (personal), **Hephaestus** (store). Other bots get a spare god's name and
+keep their own words as the role. Names appear everywhere: roster, 3D core, feed, approvals, boot log, wall display.
+Underneath nothing changes: bot ids (`chief-of-staff`…), tokens and webhooks stay as they are.
+
+- `BOT_NAMES` in Railway overrides any of them, e.g. `{"social":"Dionysus"}` or `{"social":{"name":"Dionysus","role":"Social growth"}}`.
+- The palette finds a bot by god name, role or id: `task zeus check my calendar`, `task inbox …`.
+
 ## Boot sequence
 
 On the first load in a browser tab the dashboard plays a ~2 second start-up: the rings draw, the core ignites, every real bot

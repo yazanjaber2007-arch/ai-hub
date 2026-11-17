@@ -14,22 +14,22 @@ function liveModel(d) {
   const now = Date.now(), snaps = d.snapshots || {}, order = d.bots.map(b => b.bot);
   const note = b => { const s = snaps[b]; if (!s) return ""; return s.note || ((s.tiles && s.tiles.length) ? s.tiles[0].label + " " + s.tiles[0].value : ""); };
   const bots = d.bots.map((b, i) => ({
-    id: b.bot, state: b.last_report ? b.state : "waiting", note: note(b.bot), last: b.last_report, color: PALETTE[i % PALETTE.length], glyph: glyphFor(b.bot),
+    id: b.bot, name: b.name || b.bot, role: b.role || "", state: b.last_report ? b.state : "waiting", note: note(b.bot), last: b.last_report, color: PALETTE[i % PALETTE.length], glyph: glyphFor(b.bot),
     sens: !!b.sensitive || !!(snaps[b.bot] && snaps[b.bot].finance),
   }));
-  const sensBots = new Set(bots.filter(b => b.sens).map(b => b.id));
+  const sensBots = new Set(bots.filter(b => b.sens).map(b => b.id)), nameOf = id => (bots.find(b => b.id === id) || {}).name || id;
   const metrics = bots.filter(b => snaps[b.id] && (snaps[b.id].tiles || []).length)
-    .map(b => ({ bot: b.id, color: b.color, glyph: b.glyph, sens: b.sens, tiles: snaps[b.id].tiles, updated: snaps[b.id].updated_at }));
+    .map(b => ({ bot: b.id, name: b.name, role: b.role, color: b.color, glyph: b.glyph, sens: b.sens, tiles: snaps[b.id].tiles, updated: snaps[b.id].updated_at }));
   const feed = d.briefs.map(b => ({
     key: b.id, sens: sensBots.has(b.bot), tag: b.kind === "alert" ? "URGENT" : b.priority === "high" ? "WARN" : b.priority === "low" ? "TIP" : "INFO",
-    title: b.title, body: (b.body.length > 160 ? b.body.slice(0, 160) + "…" : b.body) + " · " + b.bot, at: b.created_at,
+    title: b.title, body: (b.body.length > 160 ? b.body.slice(0, 160) + "…" : b.body) + " · " + nameOf(b.bot), at: b.created_at,
   }));
-  const needs = d.approvals.map(a => ({ id: a.id, title: a.title, meta: a.bot + (a.detail ? " · " + a.detail.slice(0, 80) : ""), amount: a.amount, bot: a.bot, sens: sensBots.has(a.bot) }));
+  const needs = d.approvals.map(a => ({ id: a.id, title: a.title, meta: nameOf(a.bot) + (a.detail ? " · " + a.detail.slice(0, 80) : ""), amount: a.amount, bot: a.bot, sens: sensBots.has(a.bot) }));
 
   const ev = [];
   order.forEach(b => (snaps[b] && snaps[b].events || []).forEach(e => ev.push({ ...e, bot: b, t: parseWhen(e.at) })));
   ev.sort((a, b) => (a.t ?? 9e15) - (b.t ?? 9e15));
-  const events = ev.slice(0, 14).map(e => ({ key: (e.t ?? e.at) + e.title, t: e.t, at: e.t != null ? hhmm(e.t) : e.at, text: e.title, note: e.note || e.bot, done: !!e.done, sens: sensBots.has(e.bot) }));
+  const events = ev.slice(0, 14).map(e => ({ key: (e.t ?? e.at) + e.title, t: e.t, at: e.t != null ? hhmm(e.t) : e.at, text: e.title, note: e.note || nameOf(e.bot), done: !!e.done, sens: sensBots.has(e.bot) }));
   const nextEv = ev.find(e => e.t != null && e.t >= now && !e.done);
 
   const pr = [], prm = [];   // prm keeps where each priority came from, for displays that must leave out sensitive bots
@@ -57,13 +57,13 @@ function liveModel(d) {
   const brief = [{ t: headline }];
   pr.slice(0, 3).forEach(p => brief.push({ t: "Priority: " + p }));
   needs.forEach(n => brief.push({ t: "Waiting for your approval: " + n.title, sens: n.sens }));
-  silent.forEach(b => brief.push({ t: b.id + " has stopped reporting (last: " + agoT(b.last) + ")." }));
+  silent.forEach(b => brief.push({ t: b.name + " has stopped reporting (last: " + agoT(b.last) + ")." }));
   if (fin) fin.bills.filter(x => !isNaN(x.dueMs) && x.dueMs - now < 3 * 864e5).forEach(x => brief.push({ t: "Bill due soon: " + x.name + " " + x.amount, sens: true }));
   if (vit && vit.streak) brief.push({ t: "Streak: " + vit.streak + " days." });
 
   return {
     owner: d.owner, bots, metrics, events, feed, needs, heat: d.grid, finance: fin, vitals: vit, brief, headline, now: rn, priorities: prm.slice(0, 6),
-    alert: silent.length ? silent.map(b => b.id).join(", ") + (silent.length > 1 ? " have" : " has") + " stopped reporting · last report " + agoT(silent[0].last) : null,
+    alert: silent.length ? silent.map(b => b.name).join(", ") + (silent.length > 1 ? " have" : " has") + " stopped reporting · last report " + agoT(silent[0].last) : null,
     next: nextEv ? { title: nextEv.title, t: nextEv.t } : null, waitingAll: bots.length > 0 && waiting.length === bots.length,
   };
 }
@@ -99,12 +99,12 @@ const Actions = {
     if (row) row.querySelectorAll("button").forEach(b => (b.disabled = true));
     try {
       const r = await api("/api/approvals/" + a.id + "/decide", { method: "POST", body: JSON.stringify({ decision }) });
-      toast(verb + " · " + a.bot + " notified (" + r.task.wake_status + ")"); bus.emit(decision === "approve" ? "approved" : "declined", a);
+      toast(verb + " · " + Names.name(a.bot) + " notified (" + r.task.wake_status + ")"); bus.emit(decision === "approve" ? "approved" : "declined", a);
     } catch (e) { toast(e.message === "auth" ? "Please sign in again" : e.message); }
     refresh();
   },
   async task(bot, title) {
-    try { const r = await api("/api/tasks", { method: "POST", body: JSON.stringify({ bot, title: title.slice(0, 200) }) }); toast("Sent to " + bot + " (" + r.wake_status + ")"); refresh(); }
+    try { const r = await api("/api/tasks", { method: "POST", body: JSON.stringify({ bot, title: title.slice(0, 200) }) }); toast("Sent to " + Names.name(bot) + " (" + r.wake_status + ")"); refresh(); }
     catch (e) { toast(e.message); }
   },
 };

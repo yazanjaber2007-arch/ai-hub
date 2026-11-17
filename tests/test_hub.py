@@ -502,6 +502,34 @@ def test_sensitive_flag_comes_from_settings(tmp_path):
     assert flags == {"chief-of-staff": False, "finance": True, "personal": True}
 
 
+def test_bots_get_greek_names_with_plain_roles(tmp_path):
+    slugs = ["chief-of-staff", "inbox", "social", "fitness", "finance", "personal"]
+    p = config.assign_personas(slugs)
+    assert {k: v["name"] for k, v in p.items()} == {"chief-of-staff": "Zeus", "inbox": "Hermes", "social": "Apollo", "fitness": "Heracles", "finance": "Plutus", "personal": "Hestia"}
+    assert p["social"]["role"] == "Social growth" and p["chief-of-staff"]["role"] == "Chief of staff"
+    # two bots for one god: the second gets a spare name and keeps its own words as the role; an unknown bot too
+    q = config.assign_personas(["inbox", "inbox-work", "dr-eggbot"])
+    assert q["inbox"]["name"] == "Hermes" and q["inbox-work"]["name"] != "Hermes" and q["inbox-work"]["role"] == "inbox work"
+    assert q["dr-eggbot"]["role"] == "dr eggbot" and len({v["name"] for v in q.values()}) == 3
+    # BOT_NAMES overrides win, as a name or as {name, role}, and are not reused
+    o = config.assign_personas(["social", "fitness"], {"social": "Dionysus", "fitness": {"name": "Atlas", "role": "Training"}})
+    assert o["social"] == {"name": "Dionysus", "role": "Social growth"} and o["fitness"] == {"name": "Atlas", "role": "Training"}
+
+
+def test_dashboard_carries_names_and_ids_stay_slugs(client2):
+    bots = {b["bot"]: b for b in client2.get("/api/dashboard", headers=bearer(ADMIN)).json()["bots"]}
+    assert bots["finance"]["name"] == "Plutus" and bots["finance"]["role"] == "Finance"
+    assert bots["chief-of-staff"]["name"] == "Zeus"        # tokens, tasks and webhooks still use the slug
+
+
+def test_bot_names_env_parsing(monkeypatch):
+    monkeypatch.setenv("ADMIN_TOKEN", ADMIN)
+    monkeypatch.setenv("SESSION_SECRET", "s" * 32)
+    monkeypatch.setenv("BOT_NAMES", '{"Social": "Dionysus", "fitness": {"name": "Atlas", "role": "Training"}}')
+    st = config.load_settings()
+    assert st.bot_names == {"social": "Dionysus", "fitness": {"name": "Atlas", "role": "Training"}}
+
+
 def test_sensitive_bots_env_parsing(monkeypatch):
     monkeypatch.setenv("ADMIN_TOKEN", ADMIN)
     monkeypatch.setenv("SESSION_SECRET", "s" * 32)

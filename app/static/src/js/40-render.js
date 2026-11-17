@@ -28,7 +28,7 @@ function renderChrome(m) {
 function makeRosterRow(b) {
   const row = el("div", "rb"); row.tabIndex = 0; row.setAttribute("role", "button");
   const g = el("div", "gl"); g.append(glyphSvg(b.glyph));
-  const mid = el("div"); mid.append(el("div", "n"), el("div", "s"));
+  const mid = el("div"); const nm = el("div", "n"); nm.append(el("span", "nm"), el("span", "role")); mid.append(nm, el("div", "s"));
   row.append(g, mid, el("div", "k"));
   const id = () => row.dataset.k;
   row.addEventListener("mouseenter", () => bus.emit("hover", id()));
@@ -41,9 +41,9 @@ function makeRosterRow(b) {
 }
 function patchRosterRow(row, b) {
   attr(row, "data-state", b.state); css(row, "--c", b.color);
-  attr(row, "aria-label", b.id + ", " + b.state);
+  attr(row, "aria-label", b.name + (b.role ? ", " + b.role : "") + ", " + b.state);
   const n = row.querySelector(".n"), s = row.querySelector(".s"), k = row.querySelector(".k");
-  setText(n, b.id); setText(k, b.state);
+  setText(n.querySelector(".nm"), b.name); setText(n.querySelector(".role"), b.role); setText(k, b.state);
   if (b.state === "silent") setAgo(s, b.last, { pre: "no report for " });
   else if (b.state === "waiting") { s.removeAttribute("data-ago"); setText(s, "waiting for first report"); }
   else if (b.note) { s.removeAttribute("data-ago"); setText(s, b.note); }
@@ -53,7 +53,7 @@ function patchRosterRow(row, b) {
   if (b.sens && !quiet) s.removeAttribute("title"); else attr(s, "title", b.note || null);
 }
 function renderRoster(m) {
-  if (!changed("roster", m.bots.map(b => [b.id, b.state, b.note, b.sens, b.color, b.state === "silent" || !b.note ? b.last : ""].join("|")))) return;
+  if (!changed("roster", m.bots.map(b => [b.id, b.name, b.role, b.state, b.note, b.sens, b.color, b.state === "silent" || !b.note ? b.last : ""].join("|")))) return;
   const list = $("rosList");
   reconcile(list, m.bots, b => b.id, makeRosterRow, patchRosterRow);
   setEmpty(list, "No bots configured yet.", !m.bots.length);
@@ -165,13 +165,13 @@ function renderHeat(m) {
     const r = el("div", "hr"), c = el("div", "hc"); c.setAttribute("role", "img"); r.append(el("span"), c);
     for (let i = 0; i < 14; i++) c.append(document.createElement("i")); return r;
   }, (r, o) => {
-    setText(r.firstChild, o.id); const cells = r.querySelectorAll("i"), first = o.counts.findIndex(v => v > 0);
-    attr(r.lastChild, "aria-label", o.id + " reports over 14 days");
+    setText(r.firstChild, Names.name(o.id)); const cells = r.querySelectorAll("i"), first = o.counts.findIndex(v => v > 0);
+    attr(r.lastChild, "aria-label", Names.name(o.id) + " reports over 14 days");
     o.counts.forEach((v, i) => {
       const k = first === -1 || i < first ? "b" : v === 0 ? "m" : v === 1 ? "l1" : v === 2 ? "l2" : "l3";
       attr(cells[i], "class", k + (i === o.counts.length - 1 ? " td" : ""));
       const day = dates[i] ? new Date(dates[i] + "T12:00:00").toLocaleDateString([], { month: "short", day: "numeric" }) : "";
-      attr(cells[i], "title", o.id + " · " + day + (k === "b" ? " · before first report" : v === 0 ? " · missed" : " · " + v + " report" + (v > 1 ? "s" : "")));
+      attr(cells[i], "title", Names.name(o.id) + " · " + day + (k === "b" ? " · before first report" : v === 0 ? " · missed" : " · " + v + " report" + (v > 1 ? "s" : "")));
     });
   });
 }
@@ -179,18 +179,18 @@ function renderHeat(m) {
 /* ---------- metrics ---------- */
 function renderMetrics(m) {
   const groups = m.metrics || [];
-  if (!changed("metrics", groups.map(g => [g.bot, g.sens, g.tiles.map(t => t.label + "=" + t.value + (t.trend || "")).join(";")].join("|")))) {
+  if (!changed("metrics", groups.map(g => [g.bot, g.name, g.sens, g.tiles.map(t => t.label + "=" + t.value + (t.trend || "")).join(";")].join("|")))) {
     return;
   }
   const body = $("metBody");
   setText($("metSub"), groups.length ? groups.reduce((n, g) => n + g.tiles.length, 0) + " numbers" : "");
   setEmpty(body, "Appears when a bot sends numbers.", !groups.length);
   reconcile(body, groups, g => g.bot, () => {
-    const d = el("div", "mg"), h = el("div", "mh"); h.append(el("span", "nm"), el("em")); d.append(h, el("div", "rows")); return d;
+    const d = el("div", "mg"), h = el("div", "mh"); h.append(el("span", "nm"), el("span", "role"), el("em")); d.append(h, el("div", "rows")); return d;
   }, (d, g) => {
     css(d, "--c", g.color);
     const h = d.firstChild; if (!h.querySelector("svg")) h.prepend(glyphSvg(g.glyph));
-    setText(h.querySelector(".nm"), g.bot); setAgo(h.querySelector("em"), g.updated, { pre: "", mode: "t" });
+    setText(h.querySelector(".nm"), g.name || g.bot); setText(h.querySelector(".role"), g.role || ""); setAgo(h.querySelector("em"), g.updated, { pre: "", mode: "t" });
     const rows = d.querySelector(".rows");
     reconcile(rows, g.tiles, t => t.label, () => { const r = el("div", "mr"); r.append(el("span"), el("b")); return r; }, (r, t) => {
       setText(r.firstChild, t.label); const b = r.lastChild; attr(b, "class", t.trend || ""); sensEl(b, g.sens);

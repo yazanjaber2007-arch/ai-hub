@@ -59,7 +59,7 @@ body.priv .sens:not(.show){filter:blur(7px);cursor:pointer;user-select:none}
 /* -------- bot roster -------- */
 .rb{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:var(--s3);align-items:center;padding:8px 10px;border:1px solid var(--stroke);border-radius:var(--r-md);background:var(--fill-1);cursor:pointer;
   transition:border-color var(--d-fast) var(--ease-io),background var(--d-fast) var(--ease-io),transform var(--d-fast) var(--ease)}
-.rb:hover,.rb.hl{border-color:var(--stroke-2);background:var(--fill-2)}
+.rb:hover,.rb.lit{border-color:var(--stroke-2);background:var(--fill-2)}
 .rb:active{transform:scale(.99)}
 .gl{position:relative;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--c,var(--cyan));background:rgba(25,211,255,.06);border:1px solid var(--stroke)}
 .gl svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
@@ -182,3 +182,9 @@ body.priv .sens:not(.show){filter:blur(7px);cursor:pointer;user-select:none}
 .ecg{display:block;width:100%;height:30px;overflow:visible}
 .ecg path{fill:none;stroke:var(--red);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:200;filter:drop-shadow(0 0 4px var(--red));animation:ecg var(--beat,2.4s) linear infinite}
 @keyframes ecg{from{stroke-dashoffset:200}to{stroke-dashoffset:-200}}
+
+/* god names with the job in plain words: "Zeus  CHIEF OF STAFF" */
+.rb .n{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px}
+.rb .n .role,.mg .mh .role{font:500 var(--t-micro)/1.2 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.rb .n .role:empty,.mg .mh .role:empty{display:none}
+.mg .mh .role{letter-spacing:.08em;opacity:.85}

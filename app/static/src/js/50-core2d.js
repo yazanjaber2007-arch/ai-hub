@@ -68,7 +68,7 @@ const Core2D = (() => {
     // labels: nearest bots choose first; a label that would overlap another slides down instead; a dark halo keeps it readable over the glow
     c.textAlign = "center"; c.lineJoin = "round"; const placed = [];
     lab.sort((a, b) => b.it.z - a.it.z).forEach(({ it, r }) => {
-      const fs = (10 + 2 * it.z) * S, text = it.b.id; c.font = "600 " + fs.toFixed(1) + "px 'JetBrains Mono',ui-monospace,Menlo,monospace";
+      const fs = (10 + 2 * it.z) * S, text = it.b.name || it.b.id; c.font = "600 " + fs.toFixed(1) + "px 'JetBrains Mono',ui-monospace,Menlo,monospace";
       const w = c.measureText(text).width + 8 * S, h = fs * 1.2; let y = it.y + r + 15 * S;
       for (let k = 0; k < 5; k++) { const x0 = it.x - w / 2, y0 = y - fs, hit = placed.some(p => x0 < p.x1 && x0 + w > p.x0 && y0 < p.y1 && y0 + h > p.y0); if (!hit) break; y += h + 2 * S; }
       placed.push({ x0: it.x - w / 2, x1: it.x + w / 2, y0: y - fs, y1: y - fs + h });
@@ -90,7 +90,7 @@ const Core2D = (() => {
     const { x, y, p } = hit(e), id = p ? p.id : null;
     if (id !== hoverId) { hoverId = id; bus.emit("hover", id); }
     cv.style.cursor = p ? "pointer" : "default";
-    if (p) { const b = bots.find(b => b.id === id); Tip.show(x, y, id + " · " + safeNote(b)); } else Tip.hide();
+    if (p) { const b = bots.find(b => b.id === id); Tip.show(x, y, Names.full(id) + " · " + safeNote(b)); } else Tip.hide();
   });
   cv.addEventListener("pointerleave", () => { hoverId = null; bus.emit("hover", null); Tip.hide(); });
   cv.addEventListener("click", e => { const { p } = hit(e); if (p) bus.emit("select", p.id); });

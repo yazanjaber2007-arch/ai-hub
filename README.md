@@ -14,13 +14,15 @@ What each bot sends is in [`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md).
 
 | Path | What | Login |
 |---|---|---|
-| `/command` | **The Command Center**: live bots, briefs, approvals, finance, vitals, timeline | yes |
+| `/command` | **The Command Center**: boot sequence, 3D core, live bots, briefs, approvals, finance, vitals, timeline, wall-display mode | yes |
 | `/` | The original plain dashboard (kept until you retire it) | yes |
 | `/demo` | Shareable demo with sample data. `?name=Alex` personalises the greeting | no |
 | `/preview` | The same demo with developer controls | no |
+| `/assets/…` | Fonts and the 3D bundle. Public, whitelisted file types only, long-cached under versioned URLs | no |
 
-`/command`, `/demo` and `/preview` are one source file (`app/static/command.html`) built three ways. The demo and preview
-builds have the live-data code (login, API calls, approvals) removed on the server, so they cannot touch your hub.
+`/command`, `/demo` and `/preview` are one source tree (`app/static/src`) assembled three ways by `app/pages.py`. The demo
+and preview builds have the live-data code (login, API calls, approvals) removed on the server, so they cannot touch your hub.
+Controls, shortcuts, URL options and the wall display are in [`docs/DASHBOARD.md`](docs/DASHBOARD.md).
 
 ## Environment variables
 
@@ -36,7 +38,7 @@ builds have the live-data code (login, API calls, approvals) removed on the serv
 | `SYNTH_MODEL` | optional | Default `claude-sonnet-5-5`. |
 | `STALE_HOURS` | optional | A bot with no brief or snapshot for this long shows silent. Default 26. |
 | `OWNER_NAME` | optional | Name shown in the dashboard greeting. Default `Mr. Stark`. |
-| `SESSION_HOURS` | optional | How long a dashboard login lasts. Default 24. |
+| `SESSION_HOURS` | optional | How long a dashboard login lasts. Default 24, maximum 720 (30 days). Raise it if the dashboard runs as an always-on wall display. |
 | `SENSITIVE_BOTS` | optional | Comma-separated bot names whose roster notes, feed items and numbers blur when the Privacy button is on. Default `finance`. Example: `finance,personal`. |
 
 Generate secrets: `python3 -c "import secrets;print(secrets.token_urlsafe(32))"`
@@ -74,3 +76,16 @@ Generate secrets: `python3 -c "import secrets;print(secrets.token_urlsafe(32))"`
 
     pip install -r requirements-dev.txt
     python -m pytest -q
+
+The dashboard source is plain files, no build step for the page itself:
+
+    app/static/src/shell.html    page skeleton (one source, three builds)
+    app/static/src/css/*.css     tokens, base, chrome, panels, core, boot, ambient, overlays, responsive (joined in name order)
+    app/static/src/js/*.js       models, rendering, core (2D + 3D), boot, sound, ambient, palette, start-up (joined in name order)
+    app/static/src/hologram/     the 3D core (three.js), bundled to app/static/assets/hologram.js
+
+Run with `HUB_DEV=1` to rebuild the page on every file change. The 3D bundle is the one built artifact and is committed:
+
+    cd tools/assets && npm install && npm run build
+
+Fonts and the bundle are served from `/assets` (see [`app/static/assets/THIRD-PARTY.md`](app/static/assets/THIRD-PARTY.md) for licenses).

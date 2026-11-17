@@ -1,0 +1,37 @@
+/* ============================================================
+   Core panel: 2D fallback canvas, 3D hologram host, labels
+   ============================================================ */
+.coreP{padding-bottom:14px}
+.cw{position:relative;width:100%;aspect-ratio:5/4;min-height:320px;user-select:none;-webkit-user-select:none}  
+.cw>#orbit{position:absolute;inset:0;width:100%;height:100%;display:block;transition:opacity 600ms var(--ease-io)}
+.holo{position:absolute;inset:0;cursor:grab;touch-action:pan-y;pointer-events:none}
+.core3d .holo{pointer-events:auto}
+.holo:active{cursor:grabbing}
+.holo>canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity 900ms var(--ease-io);   /* real alpha, no blend mode */
+  -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%)}   /* soft edges: no hard clip of the base glow */
+.core3d .holo>canvas{opacity:1}
+.cw:not(.core3d) .hl{display:none}
+.core3d #orbit{opacity:0}
+
+.tip{position:absolute;z-index:4;pointer-events:none;padding:6px 10px;border:1px solid var(--stroke-hi);border-radius:var(--r-md);background:rgba(3,10,18,.92);
+  font:500 var(--t-xs)/1.3 var(--f-mono);color:var(--ink);white-space:nowrap;opacity:0;transform:translateY(4px);transition:opacity var(--d-fast),transform var(--d-fast) var(--ease)}
+.tip.on{opacity:1;transform:none}
+
+.core-pill{position:absolute;left:10px;top:10px;z-index:3;display:flex;align-items:center;gap:7px;padding:5px 11px 5px 9px;border:1px solid var(--stroke);border-radius:var(--r-pill);
+  background:rgba(3,10,18,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font:600 var(--t-micro)/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.core-pill .sep{color:var(--mute)}
+body.alert .core-pill .dot{background:var(--amber);box-shadow:0 0 9px var(--amber)}
+body.alert #coreStat{color:var(--amber)}
+
+.hello{text-align:center;padding:8px 8px 2px}
+.hello h1{font:600 var(--t-xl)/1.15 var(--f-display);letter-spacing:.22em;text-transform:uppercase;text-wrap:balance}
+.hello p{margin:5px auto 0;max-width:54ch;color:var(--ink-2);font-size:var(--t-sm);text-wrap:pretty}
+
+/* HTML labels projected onto 3D nodes */
+.hl{position:absolute;left:0;top:0;z-index:2;display:flex;align-items:center;gap:6px;padding:4px 9px 4px 6px;border:1px solid rgba(25,211,255,.2);border-radius:var(--r-pill);
+  background:rgba(3,10,18,.62);font:600 var(--t-micro)/1 var(--f-mono);letter-spacing:.05em;color:var(--ink);white-space:nowrap;pointer-events:none;translate:-50% 13px;will-change:transform,opacity;
+  transition:border-color var(--d-fast),background var(--d-fast),box-shadow var(--d-base) var(--ease),color var(--d-fast)}
+.hl svg{width:12px;height:12px;stroke:var(--c);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.hl.on{border-color:var(--c);background:rgba(3,10,18,.9);color:#fff;box-shadow:0 0 16px color-mix(in srgb,var(--c) 40%,transparent)}
+.hl[data-state="silent"]{border-color:rgba(255,84,104,.6);color:var(--red)}.hl[data-state="silent"] svg{stroke:var(--red)}
+.hl[data-state="waiting"]{color:var(--mute)}

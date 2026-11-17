@@ -7,11 +7,11 @@ from collections import defaultdict
 from pathlib import Path
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from itsdangerous import BadSignature, TimestampSigner
 from pydantic import BaseModel, Field
 
-from . import auth, config, core, db
+from . import auth, config, core, db, pages
 from .mcp_server import BearerMiddleware, build_mcp
 
 COOKIE = "hub_session"
@@ -201,46 +201,59 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     def index():
         return FileResponse(static / "index.html", headers={"Cache-Control": "no-store"})
 
-    def _page(mode: str, host: str = "") -> HTMLResponse:
-        """One source file, three builds. The demo and preview builds physically exclude the
-        live-data code (login, API calls, approvals), and the live build excludes the demo controls."""
-        html = (static / "command.html").read_text(encoding="utf-8")
-        drop = "DEMO" if mode == "live" else "LIVE"
-        html = re.sub(rf"/\*{drop}-START\*/.*?/\*{drop}-END\*/", "", html, flags=re.S)
-        html = re.sub(rf"<!--{drop}-->.*?<!--/{drop}-->", "", html, flags=re.S)
-        html = re.sub(r"/\*(?:LIVE|DEMO)-(?:START|END)\*/|<!--/?(?:LIVE|DEMO)-->", "", html)
-        html = html.replace('<html lang="en">', f'<html lang="en" data-mode="{mode}">', 1)
+    def _page(request: Request, mode: str) -> Response:
+        """One source tree, three builds (see app/pages.py). The demo and preview builds physically
+        exclude the live-data code (login, API calls, approvals); the live build excludes demo controls."""
         head = '<meta name="robots" content="noindex,nofollow">'
-        if mode == "live":
-            html = html.replace("<title>Command Center — Preview v2</title>", "<title>Command Center</title>", 1)
-        elif mode == "demo":
+        if mode == "demo":
+            host = request.headers.get("host", "")
             safe = host if re.fullmatch(r"[A-Za-z0-9.\-]+(:\d+)?", host or "") else ""
-            img = f"https://{safe}/demo/og.png" if safe else ""
+            img = f"https://{safe}/demo/og.jpg" if safe else ""
             head += ('<meta property="og:title" content="Command Center: an AI dashboard demo">'
                      '<meta property="og:description" content="A Jarvis-style control panel for a team of AI assistants. Sample data only. Try the alert, the approvals and the command palette.">'
                      '<meta property="og:type" content="website">'
                      + (f'<meta property="og:image" content="{img}"><meta name="twitter:card" content="summary_large_image">' if img else ""))
-            html = html.replace("<title>Command Center — Preview v2</title>", "<title>Command Center — Demo</title>", 1)
-        return HTMLResponse(html.replace("<!--HEAD-->", head, 1),
-                            headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"})
+        headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Vary": "Accept-Encoding"}
+        if "gzip" in request.headers.get("accept-encoding", "").lower():
+            return Response(pages.render_compressed(mode, head), media_type="text/html; charset=utf-8",
+                            headers={**headers, "Content-Encoding": "gzip"})
+        return HTMLResponse(pages.render(mode, head), headers=headers)
+
+    @app.get("/assets/{rel:path}")
+    def asset(rel: str, request: Request, v: str | None = None):
+        """Fonts and the 3D bundle. Whitelisted extensions inside static/assets only."""
+        hit = pages.asset(rel, request.headers.get("accept-encoding", ""))
+        if not hit:
+            raise HTTPException(404, "Not found")
+        path, encoding, ctype = hit
+        headers = {"Cache-Control": "public, max-age=31536000, immutable" if v else "public, max-age=3600",
+                   "Vary": "Accept-Encoding", "X-Content-Type-Options": "nosniff"}
+        if encoding:
+            headers["Content-Encoding"] = encoding
+        return FileResponse(path, media_type=ctype, headers=headers)
 
     @app.get("/command")
-    def command():
+    def command(request: Request):
         # The page itself holds no data; everything comes from /api/dashboard after login.
-        return _page("live")
+        return _page(request, "live")
 
     @app.get("/preview")
-    def preview():
-        return _page("preview")
+    def preview(request: Request):
+        return _page(request, "preview")
 
     @app.get("/demo")
     def demo(request: Request):
         # Public, shareable, sample data only. ?name=Alex personalises the greeting (handled in the browser).
-        return _page("demo", request.headers.get("host", ""))
+        return _page(request, "demo")
+
+    @app.get("/demo/og.jpg")
+    def demo_og():
+        # 1200x630 share image of the dashboard (JPEG: 200 KB, where the PNG was 600 KB and chat apps skip big previews)
+        return FileResponse(static / "og.jpg", media_type="image/jpeg", headers={"Cache-Control": "public, max-age=3600"})
 
     @app.get("/demo/og.png")
-    def demo_og():
-        return FileResponse(static / "og.png", media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
+    def demo_og_legacy():
+        return RedirectResponse("/demo/og.jpg", status_code=301)       # links shared before the switch keep working
 
     # MCP last, so it doesn't shadow the routes above. Endpoint: /mcp
     app.mount("/", BearerMiddleware(mcp.streamable_http_app()))

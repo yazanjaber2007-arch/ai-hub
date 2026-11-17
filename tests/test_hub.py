@@ -1,10 +1,11 @@
 import json
+import re
 import types
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app import config, core, synth
+from app import config, core, pages, synth
 from app.main import create_app
 
 ADMIN = "a" * 32
@@ -381,11 +382,14 @@ def test_demo_page_is_public_noindex_and_shareable(client):
     assert r.status_code == 200 and 'data-mode="demo"' in r.text
     assert "<title>Command Center — Demo</title>" in r.text and "Preview v2" not in r.text
     assert 'name="robots" content="noindex,nofollow"' in r.text and "noindex" in r.headers["x-robots-tag"]
-    assert 'og:image" content="https://example.up.railway.app/demo/og.png"' in r.text
+    assert 'og:image" content="https://example.up.railway.app/demo/og.jpg"' in r.text
     for forbidden in ("/api/", "/login", "fetch(", "liveModel"):
         assert forbidden not in r.text, forbidden
     assert "<!--HEAD-->" not in r.text
-    assert client.get("/demo/og.png").headers["content-type"] == "image/png"
+    og = client.get("/demo/og.jpg")
+    assert og.headers["content-type"] == "image/jpeg" and og.content[:3] == b"\xff\xd8\xff" and len(og.content) < 300_000
+    legacy = client.get("/demo/og.png", follow_redirects=False)
+    assert legacy.status_code == 301 and legacy.headers["location"] == "/demo/og.jpg"
 
 
 def test_demo_never_reflects_a_hostile_host_header(client):
@@ -396,13 +400,90 @@ def test_demo_never_reflects_a_hostile_host_header(client):
 def test_preview_is_not_demo_and_not_indexed(client):
     r = client.get("/preview")
     assert 'data-mode="demo"' not in r.text and "noindex" in r.headers["x-robots-tag"]
-    assert "setPriv(false)" in r.text  # finance is shown by default
+    assert 'setPriv(store.get("priv", false)' in r.text  # finance is shown by default (privacy blur is opt-in)
 
 
 def test_live_page_has_metrics_panel_and_demo_too(client):
     for path in ("/command", "/demo", "/preview"):
         t = client.get(path).text
         assert 'id="pMet"' in t and "renderMetrics" in t, path
+
+
+# --- page builds and static assets -------------------------------------------------------------------------
+
+def test_each_build_contains_only_its_own_code(client):
+    live, demo, prev = (client.get(p).text for p in ("/command", "/demo", "/preview"))
+    assert 'data-mode="live"' in live and 'data-mode="demo"' in demo and 'data-mode="preview"' in prev
+    # live: login + API, no demo controls or sample data
+    assert 'id="loginForm"' in live and '"/api/dashboard"' in live
+    assert "demoModel" not in live and 'id="pvToggle"' not in live
+    # demo and preview physically contain no live-data code
+    for name, t in (("demo", demo), ("preview", prev)):
+        for forbidden in ('id="loginForm"', "/api/", "/login", "fetch(", "liveModel", "const Auth", "Auth.show", "approvals/"):
+            assert forbidden not in t, (name, forbidden)
+        assert "demoModel" in t and 'id="pvToggle"' in t, name
+    for t in (live, demo, prev):  # no assembler marker or placeholder survives
+        assert "LIVE-START" not in t and "DEMO-START" not in t and "<!--LIVE" not in t and "<!--DEMO" not in t
+        assert not re.search(r"\{\{\s*(MODE|TITLE|HEAD|CSS|JS|font:|asset:)", t)
+
+
+def test_pages_carry_no_secrets(client2):
+    for path in ("/command", "/demo", "/preview"):
+        t = client2.get(path).text
+        for secret in (ADMIN, COS, FIN):
+            assert secret not in t, path
+
+
+def test_asset_urls_are_versioned_and_resolve(client):
+    for path in ("/command", "/demo", "/preview"):
+        urls = set(re.findall(r"/assets/[A-Za-z0-9_./\-]+\?v=[0-9a-f]{10}", client.get(path).text))
+        assert any(u.startswith("/assets/hologram.js") for u in urls) and any("/fonts/" in u for u in urls), path
+        for u in urls:
+            r = client.get(u)
+            assert r.status_code == 200 and "immutable" in r.headers["cache-control"], (path, u)
+            assert r.headers["x-content-type-options"] == "nosniff"
+    unversioned = client.get("/assets/hologram.js")
+    assert unversioned.status_code == 200 and "immutable" not in unversioned.headers["cache-control"]
+
+
+def test_bundle_is_served_precompressed(client):
+    url = re.search(r"/assets/hologram\.js\?v=[0-9a-f]{10}", client.get("/demo").text).group(0)
+    plain = client.get(url, headers={"accept-encoding": "identity"})
+    br = client.get(url, headers={"accept-encoding": "br, gzip"})
+    gz = client.get(url, headers={"accept-encoding": "gzip"})
+    assert "content-encoding" not in plain.headers and "javascript" in plain.headers["content-type"]
+    assert br.headers["content-encoding"] == "br" and int(br.headers["content-length"]) < int(plain.headers["content-length"]) / 2
+    assert gz.headers["content-encoding"] == "gzip" and gz.content == plain.content  # the client decodes gzip itself
+    assert br.headers["vary"] == "Accept-Encoding"
+
+
+@pytest.mark.parametrize("rel", [
+    "../app/main.py", "fonts/../../main.py", "..\\app\\main.py", "/etc/passwd", "fonts//inter-var.woff2", "fonts/./inter-var.woff2",
+    "hologram.js.map", "fonts", "", "fonts/inter-var.woff2\x00.png", "hologram.js\x00", "./hologram.js",
+])
+def test_asset_resolver_refuses_traversal_and_unlisted_files(rel):
+    assert pages.asset(rel) is None, repr(rel)
+
+
+@pytest.mark.parametrize("rel", ["%2e%2e/app/main.py", "%2e%2e%2fapp%2fconfig.py", "fonts/%2e%2e/%2e%2e/main.py", "..%5capp%5cmain.py", "nope.js", "fonts/nope.woff2"])
+def test_assets_route_refuses_encoded_traversal_and_missing_files(client, rel):
+    assert client.get("/assets/" + rel).status_code == 404
+
+
+def test_pages_are_gzipped_when_accepted_and_never_cached(client):
+    plain = client.get("/demo", headers={"accept-encoding": "identity"})
+    gz = client.get("/demo", headers={"accept-encoding": "gzip"})
+    assert "content-encoding" not in plain.headers and plain.headers["cache-control"] == "no-store"
+    assert gz.headers["content-encoding"] == "gzip" and gz.text == plain.text
+    assert int(gz.headers["content-length"]) < len(plain.content) / 2
+
+
+def test_boot_is_guarded_and_ambient_starts_hidden(client):
+    t = client.get("/demo").text
+    head = t.split("</head>", 1)[0]
+    # the boot plays only when: motion is allowed, it has not played in this tab, and this is not the wall display
+    assert "prefers-reduced-motion: reduce" in head and 'sessionStorage.getItem("hub.booted")' in head and "ambient" in head and "boot=0" in head
+    assert re.search(r'<section id="ambient"[^>]*\bhidden\b', t)   # the wall display starts hidden
 
 
 def test_sensitive_flag_comes_from_settings(tmp_path):

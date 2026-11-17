@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" data-mode="{{MODE}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#030a12">
+<meta name="color-scheme" content="dark">
+<title>{{TITLE}}</title>
+{{HEAD}}
+<link rel="preload" as="font" type="font/woff2" crossorigin href="{{font:rajdhani-600}}">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="{{font:inter-var}}">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="{{font:jetbrains-mono-var}}">
+<script>
+/* Decide before first paint whether the boot sequence will play, so the dashboard never flashes first. */
+(function () {
+  var d = document.documentElement, q = location.search;
+  try {
+    var ok = !/[?&](boot=0|ambient)/.test(q) && location.hash !== "#ambient" && !matchMedia("(prefers-reduced-motion: reduce)").matches && !sessionStorage.getItem("hub.booted");
+    if (/[?&]boot=1/.test(q)) ok = true;
+    if (ok) { d.classList.add("booting"); setTimeout(function () { d.classList.remove("booting"); }, 8000); }
+  } catch (e) {}
+})();
+</script>
+<style>
+{{CSS}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7c1.7 0 3.2-.4 4.5-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a8 8 0 0 1 0 11"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4"/><path d="M16 8l4 4-4 4M20 12H9"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 16H3L12 4z"/><path d="M12 10v4M12 17h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 5l7 7-7 7M13 5l7 7-7 7"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 8.5a4.3 4.3 0 0 1 .5 8.5H7z"/></symbol>
+    <symbol id="i-brief" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></symbol>
+  </defs>
+</svg>
+
+<div id="bg" aria-hidden="true"></div>
+<div id="band" role="status" aria-live="polite"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span id="bandTxt"></span></div>
+
+<main id="app">
+  <header class="top">
+    <div class="brand"><i class="brand-mark" aria-hidden="true"></i><span class="brand-name">Command</span></div>
+    <div class="chip sys" id="sys"><span class="dot" aria-hidden="true"></span><span class="lab hide-m">System status</span><span id="sysTxt">optimal</span></div>
+    <!--DEMO--><span class="chip chip-demo" id="demoChip" hidden>Demo<span class="hide-m"> · sample data</span></span><!--/DEMO-->
+    <div class="clock" aria-live="off"><time id="clk">--:--:--</time><span class="dt" id="dt">&nbsp;</span></div>
+    <div class="tools" role="toolbar" aria-label="Dashboard controls">
+      <!--DEMO--><button class="btn hide-m" id="pvToggle" type="button">Try: trigger alert</button><!--/DEMO-->
+      <button class="ibtn" id="privBtn" type="button" aria-pressed="false" aria-label="Privacy blur" title="Privacy blur  (P)"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg></button>
+      <button class="ibtn" id="sndBtn" type="button" aria-pressed="false" aria-label="Interface sounds" title="Interface sounds  (S)"><svg class="ic" aria-hidden="true"><use href="#i-mute"/></svg></button>
+      <button class="ibtn" id="ambBtn" type="button" aria-label="Ambient mode" title="Ambient mode  (A)"><svg class="ic" aria-hidden="true"><use href="#i-expand"/></svg></button>
+      <button class="btn btn-search hide-m" id="palBtn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span>Search or command</span><kbd>Ctrl K</kbd></button>
+      <!--LIVE--><button class="ibtn hide-m" id="signout" type="button" aria-label="Sign out" title="Sign out"><svg class="ic" aria-hidden="true"><use href="#i-logout"/></svg></button><!--/LIVE-->
+    </div>
+  </header>
+
+  <div id="wall"><div class="col" id="colL"></div><div class="col" id="colC"></div><div class="col" id="colR"></div></div>
+  <div id="screens"><section class="scr" id="s-brief"></section><section class="scr" id="s-bots"></section><section class="scr" id="s-money"></section><section class="scr" id="s-body"></section></div>
+</main>
+<nav id="tabs" aria-label="Sections"><button data-i="0" class="on" type="button">Brief</button><button data-i="1" type="button">Bots</button><button data-i="2" type="button">Money</button><button data-i="3" type="button">Body</button></nav>
+
+<footer class="status">
+  <div class="sc x" id="wx"><svg class="ic" aria-hidden="true"><use href="#i-cloud"/></svg><b>18°C</b><span>clear</span></div>
+  <div class="sc"><svg class="ic" aria-hidden="true"><use href="#i-next"/></svg><span id="nextTxt">Next: nothing scheduled</span><b id="nextCd"></b></div>
+  <div class="sc x" id="hubSc"><i class="dot" aria-hidden="true"></i><span>Hub</span><b>online</b></div>
+  <button class="ask" id="ask" type="button"><span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span>Ask or command…</span><kbd>Ctrl K</kbd></button>
+  <button class="btn" id="exec" type="button"><svg class="ic" aria-hidden="true"><use href="#i-brief"/></svg><span class="hide-m">Executive briefing</span><span class="only-m">Brief</span></button>
+</footer>
+
+<section id="ambient" aria-label="Ambient display" hidden>
+  <div class="amb-drift" id="ambDrift">
+    <div class="amb-head"><div class="amb-clock"><time id="ambTime">00:00</time><span id="ambSec">00</span></div><div class="amb-date" id="ambDate"></div></div>
+    <div class="amb-core" id="ambCore"></div>
+    <div class="amb-hello"><h2 id="ambGreet"></h2><p id="ambHead"></p></div>
+    <aside class="amb-left" id="ambLeft"></aside>
+    <aside class="amb-right" id="ambRight"></aside>
+    <div class="amb-bar" id="ambBar"></div>
+  </div>
+  <div class="amb-stale" id="ambStale" hidden></div>
+  <button class="amb-exit" id="ambExit" type="button"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg><span>Exit ambient</span></button>
+</section>
+
+<div id="boot" aria-hidden="true">
+  <div class="boot-stage">
+    <div class="bks"><i class="bk bk-tl"></i><i class="bk bk-tr"></i><i class="bk bk-bl"></i><i class="bk bk-br"></i></div>
+    <svg class="boot-rings" viewBox="-210 -210 420 420" aria-hidden="true">
+      <circle class="br b1" r="196"/><circle class="br b2" r="158"/><circle class="br b3" r="118"/>
+      <g class="br-ticks"><circle r="177" stroke-dasharray="1.2 9.4"/></g>
+      <circle class="br b4" r="78"/>
+    </svg>
+    <div class="boot-core"></div>
+    <div class="boot-wave w2"></div><div class="boot-wave"></div>
+    <div class="boot-lines" id="bootLines"></div>
+    <div class="boot-title"><span id="bootTitle"></span></div>
+    <div class="boot-skip" id="bootSkip">Press any key to skip</div>
+  </div>
+</div>
+
+<div class="ov" id="pal" role="dialog" aria-modal="true" aria-label="Command palette"><div class="box"><input id="palIn" placeholder="Type a command…" autocomplete="off" spellcheck="false" aria-label="Command"><div class="pl" id="palList" role="listbox"></div></div></div>
+<div class="ov" id="brief" role="dialog" aria-modal="true" aria-label="Executive briefing"><div class="box mod"><h2>Executive briefing</h2><ul id="briefList"></ul><button class="btn" id="briefClose" type="button">Close</button></div></div>
+<!--LIVE--><div id="login" role="dialog" aria-modal="true" aria-label="Sign in"><form id="loginForm"><div class="login-mark" aria-hidden="true"></div><h2>Authenticate</h2><input id="pw" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password"><button class="btn btn-primary" type="submit">Sign in</button><div class="msg" id="loginMsg" role="alert"></div></form></div><!--/LIVE-->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div id="pool" hidden>
+  <section class="panel" id="pNeed" aria-labelledby="hNeed"><div class="ph"><h2 id="hNeed">Needs you</h2><span class="badge" id="needN">0</span></div><div class="list need" id="needList"></div></section>
+  <section class="panel" id="pRos" aria-labelledby="hRos"><div class="ph"><h2 id="hRos">Bot roster</h2><span class="meta" id="rosSub"></span></div><div class="list ros" id="rosList"></div></section>
+  <section class="panel coreP" id="pCore" aria-labelledby="hCore"><div class="ph"><h2 id="hCore">Core</h2><span class="meta"><span class="hide-m" id="coreHint">hover a bot · drag to rotate</span><span class="only-m">tap a bot</span></span></div>
+    <div class="cw" id="cw">
+      <canvas id="orbit" aria-hidden="true"></canvas>
+      <div class="holo" id="holo" aria-hidden="true"></div>
+      <div class="tip" id="tip" role="tooltip"></div>
+      <div class="core-pill" id="corePill"><i class="dot" aria-hidden="true"></i><span id="coreStat">ONLINE</span><span class="sep" aria-hidden="true">·</span><span id="coreCount"></span></div>
+    </div>
+    <div class="hello"><h1 id="greet">Good morning</h1><p id="headline">Loading…</p></div></section>
+  <section id="pNow" aria-label="Right now"><div class="rn"><div class="lb" id="nowLb">Right now</div><div class="t" id="nowTitle"></div><div class="cd" id="nowCd"></div><div class="a" id="nowActs"></div></div></section>
+  <section class="panel" id="pTl" aria-labelledby="hTl"><div class="ph"><h2 id="hTl">Mission timeline</h2><span class="meta">today</span></div><div class="tl" id="tlList"></div></section>
+  <section class="panel" id="pHeat" aria-labelledby="hHeat"><div class="ph"><h2 id="hHeat">Reporting grid</h2><span class="meta">14 days</span></div><div class="heat" id="heat"></div>
+    <div class="leg"><span>less</span><i class="c1"></i><i class="c2"></i><i class="c3"></i><span>more</span><i class="cm"></i><span>missed</span></div></section>
+  <section class="panel" id="pFeed" aria-labelledby="hFeed"><div class="ph"><h2 id="hFeed">Live feed</h2><span class="tag LIVE">LIVE</span></div><div class="list feed" id="feedList"></div></section>
+  <section class="panel" id="pMet" aria-labelledby="hMet"><div class="ph"><h2 id="hMet">Metrics</h2><span class="meta" id="metSub"></span></div><div class="met" id="metBody"></div></section>
+  <section class="panel" id="pFin" aria-labelledby="hFin"><div class="ph"><h2 id="hFin">Finance</h2><span class="meta" id="finSub"></span></div><div id="finBody"></div></section>
+  <section class="panel" id="pVit" aria-labelledby="hVit"><div class="ph"><h2 id="hVit">Vitals</h2><span class="meta" id="vitSub"></span></div><div id="vitBody"></div></section>
+</div>
+
+<script>
+{{JS}}
+</script>
+</body>
+</html>

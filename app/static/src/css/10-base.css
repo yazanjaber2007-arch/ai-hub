@@ -1,0 +1,44 @@
+/* ============================================================
+   Base: reset, background layers, global states
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%;scrollbar-color:rgba(25,211,255,.28) transparent;scrollbar-width:thin}
+body{margin:0;min-height:100%;background:var(--bg-0);color:var(--ink);
+  font:400 var(--t-sm)/1.5 var(--f-ui);font-optical-sizing:auto;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
+  overflow-x:hidden}
+h1,h2,h3,p,ul,ol{margin:0;padding:0}
+ul,ol{list-style:none}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+time,.num{font-variant-numeric:tabular-nums}
+svg.ic{width:1.15em;height:1.15em;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+::selection{background:rgba(25,211,255,.3);color:#fff}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--cyan-hi);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* background: deep gradient, faint grid, drifting light, fine grain (kills gradient banding) */
+#bg{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.06'/></svg>"),
+    radial-gradient(1300px 760px at 50% -10%,rgba(25,211,255,.13),transparent 62%),
+    radial-gradient(900px 640px at 100% 100%,rgba(138,125,255,.07),transparent 62%),
+    radial-gradient(800px 500px at 0% 85%,rgba(46,242,200,.04),transparent 60%),
+    var(--bg-0)}
+#bg::before{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(25,211,255,.034) 1px,transparent 1px),linear-gradient(90deg,rgba(25,211,255,.034) 1px,transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 32%,#000 20%,transparent 80%);mask-image:radial-gradient(ellipse 70% 60% at 50% 32%,#000 20%,transparent 80%)}
+#bg::after{content:"";position:absolute;width:120vmax;height:120vmax;left:-10vmax;top:-60vmax;
+  background:radial-gradient(closest-side,rgba(25,211,255,.075),transparent);
+  animation:bg-drift 80s var(--ease-io) infinite alternate;will-change:transform}
+@keyframes bg-drift{from{transform:translate3d(-6vmax,0,0)}to{transform:translate3d(18vmax,8vmax,0)}}
+
+/* hide the dashboard under the boot overlay until it has played */
+html.booting #app,html.booting .status,html.booting #tabs{opacity:0}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}

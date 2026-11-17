@@ -1,0 +1,63 @@
+/* ============================================================
+   Responsive: tablet (single column) and phone (swipe screens)
+   ============================================================ */
+/* the header condenses in steps instead of overflowing: names first, then the search label, then it wraps */
+@media (max-width:1460px){.brand-name,.chip .lab{display:none}}
+@media (max-width:1240px){.btn-search span{display:none}.btn-search{gap:8px;padding:0 10px}}
+
+@media (max-width:1100px){
+  #wall{grid-template-columns:minmax(0,1fr);perspective:none}
+  #colL,#colR,#colC{transform:none}
+  #colC{order:-1}
+  .top{flex-wrap:wrap}
+  .status .sc.x,.ask kbd{display:none}                           /* weather + hub status make room for the ask bar */
+  .ask{min-width:0;overflow:hidden;white-space:nowrap}
+}
+
+/* touch: every control is at least 44px, the iOS minimum (phones and tablets alike) */
+@media (pointer:coarse),(max-width:820px){
+  .btn,.btn.lg,.nd .btn{height:44px;padding:0 18px}
+  .ibtn{width:44px;height:44px}
+  .ask{height:44px}
+  .nd .a{gap:var(--s3)}
+}
+
+@media (max-width:820px){
+  #wall{display:none}
+  .top{padding:10px 12px 4px;gap:var(--s2)}
+  .brand{margin:0}.brand-name{display:none}
+  .chip{padding:0 10px}
+  .clock{order:9;flex:1 0 100%;margin:0;flex-direction:row;align-items:baseline;justify-content:center;gap:var(--s3)}
+  .clock time{font-size:1.5rem}
+  .hide-m{display:none!important}.only-m{display:inline}
+  .tools{margin-left:auto;gap:6px}
+  #tabs button{padding:15px 4px 14px}
+  #screens{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;height:calc(100dvh - var(--chrome,170px));scrollbar-width:none;overscroll-behavior-x:contain}
+  #screens::-webkit-scrollbar{display:none}
+  .scr{flex:0 0 100%;scroll-snap-align:start;overflow-y:auto;padding:4px 12px 16px;display:grid;gap:var(--s3);align-content:start}
+  #tabs{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:var(--foot,56px);z-index:5;background:rgba(4,11,19,.94);border-top:1px solid var(--stroke)}
+  #tabs button{border-bottom:2px solid transparent;font:600 var(--t-xs)/1 var(--f-display);letter-spacing:.18em;text-transform:uppercase;color:var(--mute);transition:color var(--d-fast),border-color var(--d-fast)}
+  #tabs button.on{color:var(--cyan-hi);border-bottom-color:var(--cyan);text-shadow:0 0 12px rgba(25,211,255,.5)}
+  .status{padding:8px 12px calc(8px + env(safe-area-inset-bottom));gap:var(--s2)}
+  .status .sc{display:none}
+  .ask{min-width:0;max-width:none;margin:0;padding:0 var(--s3);overflow:hidden;white-space:nowrap}.ask kbd{display:none}
+  .cw{aspect-ratio:1/.9}
+  .toast{bottom:136px}
+  .fin-top{flex-wrap:wrap}
+  .hello h1{font-size:var(--t-lg);letter-spacing:.16em}
+}
+
+@media (max-width:820px) and (max-height:480px){                  /* phone on its side: every pixel of height counts */
+  .top{flex-wrap:nowrap;padding:6px 12px 2px}
+  .clock{order:0;flex:0 1 auto;margin:0 auto}
+  .clock .dt{display:none}
+  .tools{margin-left:0}
+  .status{padding:6px 12px calc(6px + env(safe-area-inset-bottom))}
+  #tabs button{padding:11px 4px 10px}
+  .cw{aspect-ratio:2/1;min-height:200px}
+}
+
+@media (max-width:360px){
+  .panel{padding:12px 12px 14px}
+  .hr{grid-template-columns:70px minmax(0,1fr)}
+}

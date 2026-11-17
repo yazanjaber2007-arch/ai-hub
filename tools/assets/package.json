@@ -1,0 +1,9 @@
+{
+  "name": "hub-assets",
+  "private": true,
+  "description": "Build tooling for the hologram bundle and self-hosted fonts. Not used at runtime or by Railway.",
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": { "three": "0.187.0" },
+  "devDependencies": { "esbuild": "0.28.2" }
+}

@@ -219,3 +219,9 @@ def test_command_center_page_served_without_data(client):
     r = client.get("/command")
     assert r.status_code == 200 and "<title>Command Center</title>" in r.text
     assert "briefs" not in client.get("/command?demo=1").text.split("<script>")[0]  # page holds no live data
+
+
+def test_preview_page_is_static_demo(client):
+    r = client.get("/preview")
+    assert r.status_code == 200 and "Preview v2" in r.text
+    assert "/api/" not in r.text  # never calls the hub API

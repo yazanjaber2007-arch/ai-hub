@@ -152,6 +152,11 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     def command():
         return FileResponse(static / "command.html", headers={"Cache-Control": "no-store"})
 
+    @app.get("/preview")
+    def preview():
+        # Design preview with demo data only; holds no live data and needs no login.
+        return FileResponse(static / "preview.html", headers={"Cache-Control": "no-store"})
+
     # MCP last, so it doesn't shadow the routes above. Endpoint: /mcp
     app.mount("/", BearerMiddleware(mcp.streamable_http_app()))
     return app

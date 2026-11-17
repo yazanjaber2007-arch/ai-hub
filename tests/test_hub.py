@@ -203,3 +203,13 @@ def test_synthesis_rejects_non_json(client):
     client.post("/ingest/brief", json={"title": "t", "body": "b"}, headers=bearer(COS))
     with pytest.raises(ValueError):
         synth.run(client=FakeClient("sorry, can't"))
+
+
+def test_task_author_label(client):
+    via_token = client.post("/api/tasks", json={"bot": "chief-of-staff", "title": "a"}, headers=bearer(ADMIN)).json()
+    assert via_token["created_by"] == "claude"
+    from app import main
+    main._login_attempts.clear()
+    assert client.post("/login", json={"password": "pw-pw-pw"}).status_code == 200
+    via_dashboard = client.post("/api/tasks", json={"bot": "chief-of-staff", "title": "b"}).json()
+    assert via_dashboard["created_by"] == "owner"

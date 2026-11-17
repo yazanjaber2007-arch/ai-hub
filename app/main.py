@@ -132,8 +132,10 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
         return core.list_briefs(hours, bot)
 
     @app.post("/api/tasks")
-    def new_task(t: TaskIn, _: auth.Principal = Depends(admin)):
-        return core.create_task(t.bot, t.title, t.detail)
+    def new_task(t: TaskIn, request: Request, _: auth.Principal = Depends(admin)):
+        # Admin bearer token = Claude or a script; the dashboard cookie = the owner typing it in.
+        by = "claude" if request.headers.get("authorization") else "owner"
+        return core.create_task(t.bot, t.title, t.detail, created_by=by)
 
     @app.post("/api/synthesis/run")
     def run_synth(_: auth.Principal = Depends(admin)):

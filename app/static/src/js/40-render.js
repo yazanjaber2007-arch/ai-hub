@@ -3,6 +3,7 @@
    Panel renderers: model in, minimal DOM changes out
    ============================================================ */
 let M = null;   // current model (see models for shape)
+const BASE_TITLE = document.title;
 const emptyModel = () => ({ owner: "", bots: [], metrics: [], events: [], feed: [], needs: [], heat: null, finance: null, vitals: null, brief: [], headline: "Loading…", now: null, alert: null, next: null });
 
 /* ---------- chrome, headline, footer ---------- */
@@ -78,6 +79,7 @@ function renderNeeds(m) {
   setEmpty(list, "Nothing waiting. Nice.", !m.needs.length);
   const b = $("needN"), prev = b.textContent;
   setText(b, m.needs.length); if (prev !== String(m.needs.length) && App.ready && !reduced()) { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+  document.title = (m.needs.length ? "(" + m.needs.length + ") " : "") + BASE_TITLE;      // a pinned tab shows how many approvals wait (a count, never a title)
 }
 
 /* ---------- right now ---------- */

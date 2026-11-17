@@ -69,6 +69,18 @@ countdown, today's priorities, and a slow carousel of feed items, approvals and 
 - No WebGL, a lost graphics context, or a slow device: the core falls back to the flat 2D canvas automatically.
 - Text is at least 12px; changing numbers use tabular figures and count smoothly to their new value.
 
+## Performance
+
+The dashboard keeps every effect and spends only what it needs:
+
+- **In use:** full frame rate. **Idle** (30 s untouched, or the window is not focused): half rate. **Calm** (2 min untouched): 20 fps and the
+  looping decorative animations pause (they otherwise make the browser repaint the whole page 60 times a second). Any movement or key
+  wakes it instantly. The wall display never goes calm, only idle.
+- Nothing animates forever without a reason: the background light sits still, the footer wave uses the compositor, the 3D core's soft
+  edge is drawn in the shader instead of a CSS mask, and the pixel ratio is capped at 1.5.
+- **Search or command → Performance:** *Auto (recommended)*, *Battery saver* (lighter 3D, calmer page, lower rates) or *Full quality*
+  (no automatic step-down).
+
 ## If the 3D core looks flat
 
 The core protects itself on slow or odd graphics hardware, in this order: the page drops its blurred glass and drifting light ("lite"),

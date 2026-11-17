@@ -204,7 +204,8 @@ void main(){
   float lum = dot(col, vec3(0.333));
   col += (hash12(gl_FragCoord.xy + fract(uTime) * 91.7) - 0.5) * uGrain * min(1.0, lum * 6.0);
   // premultiplied alpha: light on black becomes real transparency, so the page needs no blend mode (those break inside isolated / backdrop-filter panels)
-  vec3 rgb = clamp(col, 0.0, 1.0); gl_FragColor = vec4(rgb, max(rgb.r, max(rgb.g, rgb.b)));
+  vec3 rgb = clamp(col, 0.0, 1.0) * (1.0 - smoothstep(0.72, 1.0, length((vUv - 0.5) * 2.0)));   // soft edges, so the page needs no CSS mask (a mask costs a full extra pass every frame)
+  gl_FragColor = vec4(rgb, max(rgb.r, max(rgb.g, rgb.b)));
 }`;
 
 /* ---------------- bot nodes ---------------- */

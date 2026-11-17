@@ -76,9 +76,10 @@ const Core2D = (() => {
       c.fillStyle = hoverId === it.b.id ? "#fff" : "rgba(219,244,255,.9)"; c.fillText(text, it.x, y);
     });
   }
-  const loop = ts => { if (running) { draw(ts); requestAnimationFrame(loop); } };
+  let fps = 60, lastDraw = 0;
+  const loop = ts => { if (!running) return; requestAnimationFrame(loop); if (ts - lastDraw < 1000 / fps - 2) return; lastDraw = ts; draw(ts); };
   const api = {
-    resize, setBots,
+    resize, setBots, setFps(n) { fps = clamp(+n || 60, 5, 60); },
     pulse(id) { if (reduced()) return; pulses.push({ id, t: 0 }); },
     setAlert(a) { alert = !!a; if (!running) draw(performance.now()); },
     setHover(id) { hoverId = id; if (!running) draw(performance.now()); },

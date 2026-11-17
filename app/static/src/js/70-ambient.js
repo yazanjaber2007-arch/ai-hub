@@ -122,7 +122,7 @@ const Ambient = (() => {
     document.body.classList.add("ambient"); root.hidden = false; void root.offsetWidth; root.classList.add("on");
     render(M || emptyModel(), true); tickClock(true);
     clockT = setInterval(tickClock, 1000); carT = setInterval(rotate, DWELL);
-    requestAnimationFrame(() => { Core.resize(); Core.fpsCap(30); Core.zoom(0.78); });          // tighter framing: the core is the centrepiece
+    requestAnimationFrame(() => { Core.resize(); Core.zoom(0.78); });          // tighter framing: the core is the centrepiece
     if (gesture) fullscreen(); else fsPending = true;
     keepAwake(); showUi(); bus.emit("ambient:enter");
     $("ambExit").focus({ preventScroll: true });                    // keyboard users land on the way out (it only shows for keyboard focus)
@@ -135,7 +135,7 @@ const Ambient = (() => {
     const host = $("pCore"); host.insertBefore($("cw"), host.querySelector(".hello"));
     document.body.classList.remove("ambient", "night"); root.classList.remove("on", "ui");   // the dashboard is back underneath while this fades out
     hideT = setTimeout(() => { if (!active) root.hidden = true; }, 520);
-    paintStale(null); Core.zoom(0.9); requestAnimationFrame(() => { Core.resize(); Core.fpsCap(60); measure(); });
+    paintStale(null); Core.zoom(0.9); requestAnimationFrame(() => { Core.resize(); measure(); });
     try { $("ambBtn").focus({ preventScroll: true }); } catch (e) {}   // back where the keyboard user left off
     bus.emit("ambient:exit");
   }

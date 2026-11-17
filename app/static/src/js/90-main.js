@@ -110,4 +110,4 @@ function start() {
   addEventListener("pagehide", () => {});
 }
 start();
-if (IS_AUTOMATED) window.__hub = { Core, App, bus, Sound, Ambient, Boot, get M() { return M; } };   // test hook, only under automation
+if (IS_AUTOMATED) window.__hub = { Core, App, bus, Sound, Ambient, Boot, Perf, get M() { return M; } };   // test hook, only under automation

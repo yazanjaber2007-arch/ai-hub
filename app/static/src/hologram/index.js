@@ -156,10 +156,11 @@ export function create(host, opts = {}) {
   }
   /* The ladder, gentlest first. 1: the page drops its own heavy effects (blurred glass, drifting light), which is
      often the real cost. 2: no bloom. 3: pixel ratio 1. 4: no MSAA. 5: give up and use the flat core. */
-  function applyLevel(l) {
-    if (l >= 2) quality.bloom = false;
-    if (l >= 3) { quality.dpr = 1; resize(); }
-    if (l >= 4) { quality.msaa = 0; post.setSamples(0); }
+  function applyLevel(l) {                                         // works in both directions (battery saver on, off)
+    quality.bloom = l < 2;
+    quality.dpr = l >= 3 ? 1 : o.dprCap; resize();
+    quality.msaa = l >= 4 ? 0 : (hiDpi ? 2 : 4); post.setSamples(quality.msaa);
+    dirty = true;
   }
   function degrade() {
     perf.level++;
@@ -192,10 +193,12 @@ export function create(host, opts = {}) {
     advance(seconds) { const n = Math.max(1, Math.round(seconds / 0.05)); for (let i = 0; i < n; i++) step(0.05); dirty = true; draw(); dirty = false; },
     setPaused(p) { paused = !!p; refreshLoop(); dirty = true; },
     setStatic(b) { staticFrame = !!b; if (staticFrame) { intro = 1; introActive = false; alertT = alertTarget; yawVel = 0; } dirty = true; },
-    forceDegrade() { degrade(); },                                // test hook
+    forceDegrade() { degrade(); },
+    setLevel(l) { perf.level = clamp(l | 0, 0, 4); perf.bad = 0; perf.samples = 0; applyLevel(perf.level); },
+    setAdapt(b) { o.adapt = !!b; },                                // test hook
     setFpsCap(n) { fpsCap = clamp(+n || 60, 10, 120); },
     setZoom(z) { zoom = clamp(+z || 1, 0.6, 1.4); layoutCamera(); dirty = true; },
-    getStats() { const i = renderer.info; return { fps: Math.round(1000 / perf.ema), level: perf.level, bloom: quality.bloom, dpr, w: W, h: H, calls: i.render.calls, triangles: i.render.triangles, float: post.hasFloat, intro: +intro.toFixed(3), introActive, time: +time.toFixed(2), alpha: +alertT.toFixed(2), verified: verifyMax }; },
+    getStats() { const i = renderer.info; return { fps: Math.round(1000 / perf.ema), level: perf.level, cap: fpsCap, bloom: quality.bloom, dpr, w: W, h: H, calls: i.render.calls, triangles: i.render.triangles, float: post.hasFloat, intro: +intro.toFixed(3), introActive, time: +time.toFixed(2), alpha: +alertT.toFixed(2), verified: verifyMax }; },
     dispose() {
       if (disposed) return; disposed = true; cancelAnimationFrame(raf); ac.abort();
       layer.dispose(); S.dispose(); post.dispose(); renderer.dispose();

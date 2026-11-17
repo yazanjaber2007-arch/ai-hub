@@ -33,8 +33,7 @@ svg.ic{width:1.15em;height:1.15em;stroke:currentColor;fill:none;stroke-width:1.7
   -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 32%,#000 20%,transparent 80%);mask-image:radial-gradient(ellipse 70% 60% at 50% 32%,#000 20%,transparent 80%)}
 #bg::after{content:"";position:absolute;width:120vmax;height:120vmax;left:-10vmax;top:-60vmax;
   background:radial-gradient(closest-side,rgba(25,211,255,.075),transparent);
-  animation:bg-drift 80s var(--ease-io) infinite alternate;will-change:transform}
-@keyframes bg-drift{from{transform:translate3d(-6vmax,0,0)}to{transform:translate3d(18vmax,8vmax,0)}}
+  transform:translate3d(4vmax,2vmax,0)}      /* the soft light used to drift for 80 s forever, forcing every blurred panel to repaint every frame; it now sits still */
 
 /* hide the dashboard under the boot overlay until it has played */
 html.booting #app,html.booting .status,html.booting #tabs{opacity:0}

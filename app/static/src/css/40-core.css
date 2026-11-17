@@ -7,8 +7,7 @@
 .holo{position:absolute;inset:0;cursor:grab;touch-action:pan-y;pointer-events:none}
 .core3d .holo{pointer-events:auto}
 .holo:active{cursor:grabbing}
-.holo>canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity 900ms var(--ease-io);   /* real alpha, no blend mode */
-  -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%)}   /* soft edges: no hard clip of the base glow */
+.holo>canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity 900ms var(--ease-io)}   /* real alpha, no blend mode, no mask: the edge fade is in the shader */
 .core3d .holo>canvas{opacity:1}
 .cw:not(.core3d) .hl{display:none}
 .core3d #orbit{opacity:0}

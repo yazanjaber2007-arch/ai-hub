@@ -505,7 +505,7 @@ def test_sensitive_flag_comes_from_settings(tmp_path):
 def test_bots_get_greek_names_with_plain_roles(tmp_path):
     slugs = ["chief-of-staff", "inbox", "social", "fitness", "finance", "personal"]
     p = config.assign_personas(slugs)
-    assert {k: v["name"] for k, v in p.items()} == {"chief-of-staff": "Zeus", "inbox": "Hermes", "social": "Apollo", "fitness": "Heracles", "finance": "Plutus", "personal": "Hestia"}
+    assert {k: v["name"] for k, v in p.items()} == {"chief-of-staff": "Zeus", "inbox": "Hermes", "social": "Apollo", "fitness": "Atlas", "finance": "Midas", "personal": "Athena"}
     assert p["social"]["role"] == "Social growth" and p["chief-of-staff"]["role"] == "Chief of staff"
     # two bots for one god: the second gets a spare name and keeps its own words as the role; an unknown bot too
     q = config.assign_personas(["inbox", "inbox-work", "dr-eggbot"])
@@ -518,7 +518,7 @@ def test_bots_get_greek_names_with_plain_roles(tmp_path):
 
 def test_dashboard_carries_names_and_ids_stay_slugs(client2):
     bots = {b["bot"]: b for b in client2.get("/api/dashboard", headers=bearer(ADMIN)).json()["bots"]}
-    assert bots["finance"]["name"] == "Plutus" and bots["finance"]["role"] == "Finance"
+    assert bots["finance"]["name"] == "Midas" and bots["finance"]["role"] == "Finance"
     assert bots["chief-of-staff"]["name"] == "Zeus"        # tokens, tasks and webhooks still use the slug
 
 

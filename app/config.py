@@ -20,13 +20,13 @@ PERSONAS = (
     (r"chief|staff|exec|assistant", "Zeus", "Chief of staff"),
     (r"mail|inbox", "Hermes", "Inbox"),
     (r"social|growth|content|media|post", "Apollo", "Social growth"),
-    (r"fit|health|gym|vital|body", "Heracles", "Fitness"),
-    (r"fin|money|bank|cash|budget", "Plutus", "Finance"),
-    (r"personal|home|life", "Hestia", "Personal"),
+    (r"fit|health|gym|vital|body", "Atlas", "Fitness"),
+    (r"fin|money|bank|cash|budget", "Midas", "Finance"),
+    (r"personal|home|life", "Athena", "Personal"),
     (r"shop|store|commerce|order", "Hephaestus", "Store"),
 )
 # Used when two bots map to the same god, or a bot fits no persona. Those keep their own words as the role.
-SPARE_NAMES = ("Athena", "Artemis", "Poseidon", "Demeter", "Ares", "Dionysus", "Hera", "Hades", "Iris", "Hecate")
+SPARE_NAMES = ("Eos", "Artemis", "Poseidon", "Demeter", "Ares", "Dionysus", "Hera", "Hades", "Iris", "Hecate")
 
 
 def assign_personas(slugs, overrides: dict | None = None) -> dict:

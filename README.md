@@ -39,7 +39,7 @@ Controls, shortcuts, URL options and the wall display are in [`docs/DASHBOARD.md
 | `STALE_HOURS` | optional | A bot with no brief or snapshot for this long shows silent. Default 26. |
 | `OWNER_NAME` | optional | Name shown in the dashboard greeting. Default `Mr. Stark`. |
 | `SESSION_HOURS` | optional | How long a dashboard login lasts. Default 24, maximum 720 (30 days). Raise it if the dashboard runs as an always-on wall display. |
-| `BOT_NAMES` | optional | Display names on the dashboard. By default each bot gets a Greek god for its job (`chief-of-staff` Zeus, `inbox` Hermes, `social` Apollo, `fitness` Heracles, `finance` Plutus, `personal` Hestia, shop bots Hephaestus) with the job in plain words beside it. Override: `{"social":"Dionysus"}` or `{"social":{"name":"Dionysus","role":"Social growth"}}`. Bot ids, tokens and webhooks never change. |
+| `BOT_NAMES` | optional | Display names on the dashboard. By default each bot gets a Greek-myth name for its job (`chief-of-staff` Zeus, `inbox` Hermes, `social` Apollo, `fitness` Atlas, `finance` Midas, `personal` Athena, shop bots Hephaestus) with the job in plain words beside it. Override: `{"social":"Dionysus"}` or `{"social":{"name":"Dionysus","role":"Social growth"}}`. Bot ids, tokens and webhooks never change. |
 | `SENSITIVE_BOTS` | optional | Comma-separated bot names whose roster notes, feed items and numbers blur when the Privacy button is on. Default `finance`. Example: `finance,personal`. |
 
 Generate secrets: `python3 -c "import secrets;print(secrets.token_urlsafe(32))"`

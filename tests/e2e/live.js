@@ -24,7 +24,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : fail++; console.log(
   ok(/Good (morning|afternoon|evening), Mr\. Stark/.test(await p.textContent('#greet')), 'greeting names the owner');
   ok((await p.$$('#rosList .rb')).length === 5, '5 bots in the roster');
   const nm = await p.$$eval('#rosList .rb .nm', n => n.map(x => x.textContent).sort());
-  ok(JSON.stringify(nm) === JSON.stringify(['Apollo', 'Heracles', 'Hermes', 'Plutus', 'Zeus']), 'roster uses the god names ' + JSON.stringify(nm));
+  ok(JSON.stringify(nm) === JSON.stringify(['Apollo', 'Atlas', 'Hermes', 'Midas', 'Zeus']), 'roster uses the god names ' + JSON.stringify(nm));
   await p.keyboard.press('Control+k'); await p.waitForTimeout(250); await p.keyboard.type('task zeus check the calendar'); await p.waitForTimeout(200);
   ok(/Give Zeus \(Chief of staff\) a task/.test(await p.textContent('#palList .pi.sel')), 'palette: "task zeus ..." finds the chief of staff by god name');
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);

@@ -18,8 +18,8 @@ and the automatic fallback when WebGL is missing or the device is too slow).
 
 ## Bot names
 
-Every bot has a Greek god's name and its job in plain words: **Zeus** (chief of staff), **Hermes** (inbox), **Apollo** (social growth),
-**Heracles** (fitness), **Plutus** (finance), **Hestia** (personal), **Hephaestus** (store). Other bots get a spare god's name and
+Every bot has a Greek-myth name and its job in plain words: **Zeus** (chief of staff), **Hermes** (inbox), **Apollo** (social growth),
+**Atlas** (fitness), **Midas** (finance), **Athena** (personal), **Hephaestus** (store). Other bots get a spare god's name and
 keep their own words as the role. Names appear everywhere: roster, 3D core, feed, approvals, boot log, wall display.
 Underneath nothing changes: bot ids (`chief-of-staff`…), tokens and webhooks stay as they are.
 

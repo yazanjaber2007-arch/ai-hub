@@ -77,7 +77,7 @@ kbd{font:600 10px var(--mono);border:1px solid var(--line-hi);border-radius:4px;
 .gl.idle{animation:breathe 4s ease-in-out infinite}
 .gl.waiting{color:var(--mute);opacity:.6}
 .gl.silent{color:var(--red);border-color:var(--red);animation:blink 1s infinite}
-.rb .n{font-weight:600;font-size:13px}.rb .s{font:11px var(--mono);color:var(--mute);overflow-wrap:anywhere}
+.rb .n{font-weight:600;font-size:13px}.rb .s{font:11px var(--mono);color:var(--mute);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .rb .k{font:700 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
 .rb .k.idle{color:var(--amber)}.rb .k.silent{color:var(--red)}.rb .k.waiting{color:var(--mute)}
 @keyframes glow{50%{box-shadow:0 0 16px var(--c,var(--cyan));background:rgba(25,211,255,.18)}}
@@ -105,7 +105,7 @@ kbd{font:600 10px var(--mono);border:1px solid var(--line-hi);border-radius:4px;
 .tag{font:700 9px var(--mono);letter-spacing:.1em;padding:3px 6px;border-radius:4px;margin-top:1px}
 .tag.INFO{background:rgba(25,211,255,.16);color:var(--cyan)}.tag.WARN{background:rgba(255,176,32,.16);color:var(--amber)}
 .tag.TIP{background:rgba(138,125,255,.18);color:var(--violet)}.tag.URGENT{background:rgba(255,77,94,.2);color:var(--red)}.tag.LIVE{background:rgba(46,242,200,.16);color:var(--teal)}
-.it .tt{font-weight:600;font-size:13px;overflow-wrap:anywhere}.it .bd{color:var(--mute);font-size:12px;overflow-wrap:anywhere;white-space:pre-wrap}.it .ag{font:11px var(--mono);color:var(--mute)}
+.it .tt{font-weight:600;font-size:13px;overflow-wrap:anywhere}.it .bd{color:var(--mute);font-size:12px;overflow-wrap:anywhere;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}.it .ag{font:11px var(--mono);color:var(--mute)}
 /* timeline */
 .tl{display:grid;gap:0;position:relative;padding-left:14px}
 .tl::before{content:"";position:absolute;left:3px;top:6px;bottom:6px;width:1px;background:var(--line-hi)}
@@ -342,7 +342,7 @@ async function api(path, opt = {}) {
 function liveModel(d) {
   const now = Date.now(), snaps = d.snapshots || {}, order = d.bots.map(b => b.bot);
   const note = b => { const s = snaps[b]; if (!s) return ""; return s.note || ((s.tiles && s.tiles.length) ? s.tiles[0].label + " " + s.tiles[0].value : ""); };
-  const bots = d.bots.map((b, i) => ({ id: b.bot, state: b.last_report ? b.state : "waiting", note: note(b.bot), last: b.last_report, color: PALETTE[i % PALETTE.length], glyph: glyphFor(b.bot), sens: !!(snaps[b.bot] && snaps[b.bot].finance) }));
+  const bots = d.bots.map((b, i) => ({ id: b.bot, state: b.last_report ? b.state : "waiting", note: note(b.bot), last: b.last_report, color: PALETTE[i % PALETTE.length], glyph: glyphFor(b.bot), sens: !!b.sensitive || !!(snaps[b.bot] && snaps[b.bot].finance) }));
   const sensBots = new Set(bots.filter(b => b.sens).map(b => b.id));
   const metrics = bots.filter(b => snaps[b.id] && (snaps[b.id].tiles || []).length).map(b => ({ bot: b.id, color: b.color, glyph: b.glyph, sens: b.sens, tiles: snaps[b.id].tiles, updated: snaps[b.id].updated_at }));
   const feed = d.briefs.map(b => ({ sens: sensBots.has(b.bot), tag: b.kind === "alert" ? "URGENT" : b.priority === "high" ? "WARN" : b.priority === "low" ? "TIP" : "INFO", title: b.title,
@@ -415,7 +415,7 @@ function renderRoster() {
   const r = clear($("rosList"));
   if (!M.bots.length) r.append(el("div", "empty", "No bots configured yet."));
   M.bots.forEach(b => { const row = el("div", "rb"), g = el("div", "gl " + b.state); g.style.setProperty("--c", b.color); g.innerHTML = '<svg viewBox="0 0 24 24">' + b.glyph + "</svg>";
-    const m = el("div"); m.append(el("div", "n", b.id), sensEl(el("div", "s", b.state === "silent" ? "no report for " + ago(b.last) : b.state === "waiting" ? "waiting for first report" : (b.note || "last report " + agoT(b.last))), b.sens && b.state !== "silent" && b.state !== "waiting"));
+    const m = el("div"); m.append(el("div", "n", b.id), (() => { const t = b.state === "silent" ? "no report for " + ago(b.last) : b.state === "waiting" ? "waiting for first report" : (b.note || "last report " + agoT(b.last)); const e = el("div", "s", t); if (!b.sens) e.title = t; return sensEl(e, b.sens && b.state !== "silent" && b.state !== "waiting"); })());
     row.append(g, m, el("div", "k " + b.state, b.state)); r.append(row); });
   $("rosSub").textContent = M.bots.filter(b => b.state === "working" || b.state === "idle").length + "/" + M.bots.length + " online";
 }

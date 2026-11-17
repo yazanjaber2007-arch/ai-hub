@@ -37,6 +37,7 @@ builds have the live-data code (login, API calls, approvals) removed on the serv
 | `STALE_HOURS` | optional | A bot with no brief or snapshot for this long shows silent. Default 26. |
 | `OWNER_NAME` | optional | Name shown in the dashboard greeting. Default `Mr. Stark`. |
 | `SESSION_HOURS` | optional | How long a dashboard login lasts. Default 24. |
+| `SENSITIVE_BOTS` | optional | Comma-separated bot names whose roster notes, feed items and numbers blur when the Privacy button is on. Default `finance`. Example: `finance,personal`. |
 
 Generate secrets: `python3 -c "import secrets;print(secrets.token_urlsafe(32))"`
 

@@ -403,3 +403,19 @@ def test_live_page_has_metrics_panel_and_demo_too(client):
     for path in ("/command", "/demo", "/preview"):
         t = client.get(path).text
         assert 'id="pMet"' in t and "renderMetrics" in t, path
+
+
+def test_sensitive_flag_comes_from_settings(tmp_path):
+    st = make_settings(tmp_path, bot_tokens={"chief-of-staff": COS, "finance": FIN, "personal": "p" * 32}, sensitive_bots=("finance", "personal"))
+    with TestClient(create_app(st)) as c:
+        flags = {b["bot"]: b["sensitive"] for b in c.get("/api/dashboard", headers=bearer(ADMIN)).json()["bots"]}
+    assert flags == {"chief-of-staff": False, "finance": True, "personal": True}
+
+
+def test_sensitive_bots_env_parsing(monkeypatch):
+    monkeypatch.setenv("ADMIN_TOKEN", ADMIN)
+    monkeypatch.setenv("SESSION_SECRET", "s" * 32)
+    monkeypatch.delenv("SENSITIVE_BOTS", raising=False)
+    assert config.load_settings().sensitive_bots == ("finance",)
+    monkeypatch.setenv("SENSITIVE_BOTS", "Finance, Personal ,")
+    assert config.load_settings().sensitive_bots == ("finance", "personal")

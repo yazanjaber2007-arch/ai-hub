@@ -314,7 +314,7 @@ def dashboard() -> dict:
             n_open = len(s.scalars(select(Task.id).where(Task.bot == bot, Task.status == "open")).all())
             healthy = last is not None and now - last < stale
             active = bot in seen and now - seen[bot] < timedelta(minutes=3)
-            bots.append({"bot": bot, "healthy": healthy, "state": "silent" if not healthy else ("working" if active else "idle"),
+            bots.append({"bot": bot, "sensitive": bot in config.settings.sensitive_bots, "healthy": healthy, "state": "silent" if not healthy else ("working" if active else "idle"),
                          "last_report": last.isoformat() + "Z" if last else None,
                          "last_seen": seen[bot].isoformat() + "Z" if bot in seen else None, "open_tasks": n_open})
         tasks = [_task_dict(t) for t in s.scalars(select(Task).order_by(Task.created_at.desc()).limit(30))]

@@ -27,6 +27,7 @@ class Settings:
     stale_hours: int = 26
     cookie_secure: bool = True
     owner_name: str = "Mr. Stark"
+    sensitive_bots: tuple = ("finance",)
     session_hours: int = 24
 
     def validate(self) -> None:
@@ -77,6 +78,7 @@ def load_settings() -> Settings:
         stale_hours=int(os.environ.get("STALE_HOURS", "26")),
         cookie_secure=os.environ.get("COOKIE_SECURE", "1") != "0",
         owner_name=os.environ.get("OWNER_NAME", "Mr. Stark").strip()[:60] or "Mr. Stark",
+        sensitive_bots=tuple(slug(x) for x in os.environ.get("SENSITIVE_BOTS", "finance").split(",") if slug(x)),
         session_hours=max(1, min(int(os.environ.get("SESSION_HOURS", "24")), 24 * 30)),
     )
     s.validate()

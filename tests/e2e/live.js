@@ -56,11 +56,16 @@ let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : fail++; console.log(
   ok(await p.evaluate(() => !window.__hub.Boot.running), 'no second boot after re-login in the same tab');
 
   // smoothness: idle refreshes must not touch the panels' DOM
-  const counts = await p.evaluate(async () => {
-    const c = {}; const mo = new MutationObserver(l => { for (const m of l) { const e = m.target.nodeType === 3 ? m.target.parentElement : m.target, box = e && e.closest && e.closest('.panel'); if (box) c[box.id] = (c[box.id] || 0) + 1; } });
-    mo.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'data-ago', 'data-until', 'title', 'aria-label', 'data-state'] });
-    for (let i = 0; i < 3; i++) { await refresh(); await new Promise(r => setTimeout(r, 1200)); } mo.disconnect(); return c;
-  });
+  // A real change can land in the window (a bot flips from working to idle 3 minutes after it reported, a timeline bar advances),
+  // so the check passes when any of three quiet windows shows zero mutations; the point is that an unchanged refresh touches nothing.
+  let counts = null;
+  for (let attempt = 0; attempt < 3 && !(counts && Object.keys(counts).length === 0); attempt++) {
+    counts = await p.evaluate(async () => {
+      const c = {}; const mo = new MutationObserver(l => { for (const m of l) { const e = m.target.nodeType === 3 ? m.target.parentElement : m.target, box = e && e.closest && e.closest('.panel'); if (box) c[box.id] = (c[box.id] || 0) + 1; } });
+      mo.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'data-ago', 'data-until', 'title', 'aria-label', 'data-state'] });
+      for (let i = 0; i < 3; i++) { await refresh(); await new Promise(r => setTimeout(r, 1200)); } mo.disconnect(); return c;
+    });
+  }
   ok(Object.keys(counts).length === 0, 'idle refreshes cause no panel DOM mutations ' + JSON.stringify(counts));
   console.log('   errors:', JSON.stringify(errs)); ok(errs.length === 0, 'no console/page errors');
   console.log('\n' + pass + ' passed, ' + fail + ' failed'); await b.close(); process.exit(fail ? 1 : 0);

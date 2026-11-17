@@ -427,6 +427,15 @@ def test_each_build_contains_only_its_own_code(client):
         assert not re.search(r"\{\{\s*(MODE|TITLE|HEAD|CSS|JS|font:|asset:)", t)
 
 
+def test_pages_cannot_be_framed_and_cannot_talk_to_other_origins(client):
+    for path in ("/command", "/demo", "/preview"):
+        h = client.get(path).headers
+        csp = h["content-security-policy"]
+        assert "default-src 'none'" in csp and "frame-ancestors 'none'" in csp and "connect-src 'self'" in csp, path
+        assert "http:" not in csp and "https:" not in csp and "*" not in csp, path  # no origin is whitelisted
+        assert h["x-frame-options"] == "DENY" and h["referrer-policy"] == "no-referrer" and h["x-content-type-options"] == "nosniff"
+
+
 def test_pages_carry_no_secrets(client2):
     for path in ("/command", "/demo", "/preview"):
         t = client2.get(path).text

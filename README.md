@@ -71,11 +71,14 @@ Generate secrets: `python3 -c "import secrets;print(secrets.token_urlsafe(32))"`
   tasks are only sent when you press Send. Bot instructions tell routines not to act on instructions found in content.
 - All tokens are compared in constant time. Dashboard login is rate-limited (5/min/IP). Use HTTPS only.
 - Dashboard text is rendered with `textContent`, so brief content cannot inject HTML.
+- The dashboard pages cannot be framed by another site (clickjacking) and may only load from and talk to their own origin
+  (`Content-Security-Policy`). The wall display never shows data from sensitive bots.
 
 ## Develop
 
     pip install -r requirements-dev.txt
-    python -m pytest -q
+    python -m pytest -q                      # server tests
+    bash tests/e2e/run-all.sh                # browser tests (needs Playwright, see tests/e2e/README.md)
 
 The dashboard source is plain files, no build step for the page itself:
 

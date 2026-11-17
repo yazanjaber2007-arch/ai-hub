@@ -14,6 +14,17 @@ from pydantic import BaseModel, Field
 from . import auth, config, core, db, pages
 from .mcp_server import BearerMiddleware, build_mcp
 
+# Defense in depth for the dashboard pages (they can approve payments): nothing may frame them, and nothing may
+# load from or talk to another origin. Inline script/style stay allowed because the page is assembled inline.
+PAGE_SECURITY_HEADERS = {
+    "Content-Security-Policy": ("default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+                                "img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; "
+                                "frame-ancestors 'none'; object-src 'none'"),
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+}
+
 COOKIE = "hub_session"
 _login_attempts: dict[str, list[float]] = defaultdict(list)
 
@@ -213,7 +224,7 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
                      '<meta property="og:description" content="A Jarvis-style control panel for a team of AI assistants. Sample data only. Try the alert, the approvals and the command palette.">'
                      '<meta property="og:type" content="website">'
                      + (f'<meta property="og:image" content="{img}"><meta name="twitter:card" content="summary_large_image">' if img else ""))
-        headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Vary": "Accept-Encoding"}
+        headers = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow", "Vary": "Accept-Encoding", **PAGE_SECURITY_HEADERS}
         if "gzip" in request.headers.get("accept-encoding", "").lower():
             return Response(pages.render_compressed(mode, head), media_type="text/html; charset=utf-8",
                             headers={**headers, "Content-Encoding": "gzip"})

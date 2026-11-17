@@ -6,11 +6,26 @@ const goto = i => {
   if (MQ_PHONE.matches) $("screens").scrollTo({ left: $("screens").clientWidth * i, behavior: "smooth" });
   else $(["pNow", "pRos", "pFin", "pVit"][i]).scrollIntoView({ behavior: "smooth", block: "center" });
 };
-function closeOverlays() { $$(".ov").forEach(o => o.classList.remove("open")); }
+/* dialogs: focus moves in when one opens, stays inside while it is open, and returns to where it came from */
+let _returnTo = null;
+const rememberFocus = () => { const a = document.activeElement; _returnTo = a && a !== document.body ? a : null; };
+function closeOverlays() {
+  const was = $$(".ov.open").length; $$(".ov").forEach(o => o.classList.remove("open"));
+  if (was && _returnTo && _returnTo.isConnected && !Ambient.active) { try { _returnTo.focus({ preventScroll: true }); } catch (e) {} }
+  _returnTo = null;
+}
+function trapTab(e) {
+  const box = document.querySelector(".ov.open .box"); if (!box) return false;
+  const f = $$("button:not([disabled]),input,[tabindex]:not([tabindex='-1'])", box).filter(n => n.offsetParent !== null); if (!f.length) return false;
+  const i = f.indexOf(document.activeElement);
+  if (e.shiftKey && i <= 0) { f[f.length - 1].focus(); e.preventDefault(); } else if (!e.shiftKey && (i === -1 || i === f.length - 1)) { f[0].focus(); e.preventDefault(); }
+  return true;
+}
 function openBrief() {
+  rememberFocus();
   const l = clear($("briefList")), priv = document.body.classList.contains("priv");
   (M && M.brief.length ? M.brief : [{ t: "Nothing to report yet." }]).forEach(x => l.append(el("li", "", x.sens && priv ? "(finance detail hidden: privacy is on)" : x.t)));
-  $("brief").classList.add("open"); bus.emit("overlay:open");
+  $("brief").classList.add("open"); bus.emit("overlay:open"); setTimeout(() => $("briefClose").focus(), 30);
 }
 
 const Palette = (() => {
@@ -52,11 +67,11 @@ const Palette = (() => {
     const s = list.querySelector(".sel"); if (s) s.scrollIntoView({ block: "nearest" });
   }
   return {
-    open() { $("pal").classList.add("open"); $("palIn").value = ""; sel = 0; render(); bus.emit("overlay:open"); setTimeout(() => $("palIn").focus(), 30); },
+    open() { if (!this.isOpen) rememberFocus(); $("pal").classList.add("open"); $("palIn").value = ""; sel = 0; render(); bus.emit("overlay:open"); setTimeout(() => $("palIn").focus(), 30); },
     render, key(e) {
       if (e.key === "ArrowDown") { sel = Math.min(sel + 1, shown.length - 1); render(); e.preventDefault(); }
       else if (e.key === "ArrowUp") { sel = Math.max(sel - 1, 0); render(); e.preventDefault(); }
-      else if (e.key === "Enter" && shown[sel]) { const c = shown[sel]; closeOverlays(); c.run(); }
+      else if (e.key === "Enter" && shown[sel]) { e.preventDefault(); const c = shown[sel]; closeOverlays(); c.run(); }   // preventDefault: the Enter must not also "click" whatever the command focuses
     },
     get isOpen() { return $("pal").classList.contains("open"); },
   };
@@ -70,6 +85,7 @@ function initPalette() {
   document.addEventListener("keydown", e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); Palette.open(); return; }
     if (e.key === "Escape") { if (Ambient.active) return; closeOverlays(); return; }
+    if (e.key === "Tab" && trapTab(e)) return;               // a dialog keeps Tab inside itself
     if (Palette.isOpen) { Palette.key(e); return; }
     const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement && document.activeElement.tagName);
     if (typing || e.ctrlKey || e.metaKey || e.altKey || Boot.running) return;

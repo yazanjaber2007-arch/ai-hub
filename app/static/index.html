@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hub</title>
+<style>
+:root{--bg:#f6f6f4;--card:#fff;--ink:#1b1b1a;--mute:#6b6b66;--line:#e3e3df;--ok:#1f8a4c;--bad:#c0392b;--hi:#b36b00;--accent:#2b5fd9}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#111210;--card:#1a1b19;--ink:#ecece8;--mute:#9a9a93;--line:#2a2b28;--ok:#47c27a;--bad:#ef6b5b;--hi:#e0a03a;--accent:#7aa2ff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:8px 0 16px;display:flex;justify-content:space-between;align-items:center}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);margin:24px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.mute{color:var(--mute);font-size:13px}.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
+.ok{background:var(--ok)}.bad{background:var(--bad)}.high{color:var(--hi);font-weight:600}
+.body{white-space:pre-wrap;margin:6px 0 0}
+button,input,select,textarea{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+button{cursor:pointer;background:var(--accent);color:#fff;border-color:transparent}button.ghost{background:none;color:var(--mute);border-color:var(--line)}
+form.new{display:grid;gap:8px}ul{margin:6px 0 0;padding-left:20px}
+#login{max-width:320px;margin:20vh auto;display:grid;gap:10px}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const app=document.getElementById('app');
+const el=(t,a={},...kids)=>{const e=document.createElement(t);for(const[k,v]of Object.entries(a)){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v)}
+ for(const c of kids.flat())e.append(c instanceof Node?c:document.createTextNode(c??''));return e};
+const ago=iso=>{if(!iso)return'never';const m=Math.round((Date.now()-new Date(iso))/60000);return m<1?'just now':m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':Math.round(m/1440)+' d ago'};
+async function api(path,opt={}){const r=await fetch(path,{credentials:'same-origin',headers:{'Content-Type':'application/json'},...opt});
+ if(r.status===401)throw new Error('auth');const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||j.detail||r.statusText);return j}
+function loginView(msg=''){app.replaceChildren(el('form',{id:'login',onsubmit:async e=>{e.preventDefault();
+ try{await api('/login',{method:'POST',body:JSON.stringify({password:e.target.pw.value})});load()}catch(x){loginView(x.message)}}},
+ el('h1',{},'Hub'),el('input',{name:'pw',type:'password',placeholder:'Password',autofocus:''}),el('button',{},'Sign in'),el('div',{class:'mute'},msg)))}
+async function sendTask(t,btn){btn.disabled=true;try{const r=await api('/api/tasks',{method:'POST',body:JSON.stringify(t)});btn.textContent='Sent · '+r.wake_status}catch(x){btn.textContent=x.message;btn.disabled=false}}
+function render(d){
+ const bots=d.bots.map(b=>el('div',{class:'card row'},el('div',{},el('span',{class:'dot '+(b.healthy?'ok':'bad')}),b.bot),
+  el('div',{class:'mute'},'last brief '+ago(b.last_brief)+' · '+b.open_tasks+' open task(s)')));
+ const s=d.synthesis&&d.synthesis.content;
+ const syn=s?[el('div',{class:'card'},el('strong',{},s.headline||''),el('div',{class:'mute'},'Synthesised '+ago(d.synthesis.created_at)+' from '+(s.briefs_used||0)+' brief(s)'),
+  (s.priorities||[]).length?el('ul',{},s.priorities.map(p=>el('li',{},el('strong',{},p.title),' — ',p.why||'',p.bot?' ('+p.bot+')':''))):'' ,
+  (s.conflicts||[]).length?el('div',{},el('div',{class:'mute'},'Conflicts'),el('ul',{},s.conflicts.map(c=>el('li',{},c)))):''),
+  ...(s.suggested_tasks||[]).map(t=>{const b=el('button',{onclick:()=>sendTask(t,b)},'Send to '+t.bot);return el('div',{class:'card row'},el('div',{},el('strong',{},t.title),el('div',{class:'mute'},t.detail||'')),b)})]
+  :[el('div',{class:'card mute'},'No synthesis yet.')];
+ const briefs=d.briefs.length?d.briefs.map(b=>el('div',{class:'card'},el('div',{class:'row'},el('strong',{},b.title),el('span',{class:'mute'},b.bot+' · '+ago(b.created_at))),
+  b.priority==='high'?el('div',{class:'high'},'High priority'):'',el('div',{class:'body'},b.body),
+  b.items.length?el('ul',{},b.items.map(i=>el('li',{},i))):'')):[el('div',{class:'card mute'},'Nothing in the last 24 hours.')];
+ const tasks=d.tasks.length?d.tasks.map(t=>el('div',{class:'card'},el('div',{class:'row'},el('strong',{},t.title),el('span',{class:'mute'},t.bot+' · '+t.status+' · '+t.wake_status)),
+  t.result?el('div',{class:'body mute'},t.result):'')):[el('div',{class:'card mute'},'No tasks.')];
+ const bot=d.bots[0]?d.bots[0].bot:'';
+ const form=el('form',{class:'new',onsubmit:async e=>{e.preventDefault();const f=e.target;try{await api('/api/tasks',{method:'POST',body:JSON.stringify({bot:f.bot.value,title:f.title.value,detail:f.detail.value})});load()}catch(x){alert(x.message)}}},
+  el('select',{name:'bot'},d.bots.map(b=>el('option',{value:b.bot},b.bot))),el('input',{name:'title',placeholder:'Task',required:'',maxlength:'200'}),el('textarea',{name:'detail',placeholder:'Details (optional)',rows:'2'}),el('button',{},'Give task'));
+ app.replaceChildren(el('h1',{},'Hub',el('button',{class:'ghost',onclick:async()=>{await api('/logout',{method:'POST'});loginView()}},'Sign out')),
+  el('h2',{},'Bots'),...bots,el('h2',{},'Today'),...syn,el('h2',{},'Briefs (24 h)'),...briefs,el('h2',{},'Tasks'),...tasks,el('h2',{},'New task'),form)}
+async function load(){try{render(await api('/api/overview'))}catch(e){e.message==='auth'?loginView():app.replaceChildren(el('div',{class:'card'},e.message))}}
+load();setInterval(()=>{if(document.visibilityState==='visible'&&!document.getElementById('login')&&!document.activeElement.matches('input,textarea,select'))load()},60000);
+</script>
+</body>
+</html>

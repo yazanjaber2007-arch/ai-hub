@@ -26,7 +26,7 @@ for _ in $(seq 1 40); do curl -sf "$HUB/health" >/dev/null && break; sleep 0.5; 
 python3 tests/e2e/seed.py
 
 status=0
-for t in ambient a11y live; do
+for t in ambient a11y core live; do
   echo; echo "=== $t"
   node "tests/e2e/$t.js" || status=1
 done

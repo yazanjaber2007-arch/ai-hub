@@ -121,6 +121,18 @@ export function create(host, opts = {}) {
     renderer.info.reset(); post.render(S.scene, camera, post_);
   }
 
+  /* Once the intro is done the core must be on screen. Some GPU/driver/format combinations produce a silently blank
+     canvas (an incomplete half-float framebuffer, say): look at a few pixels at the centre once, and fall back to 2D if empty. */
+  let verified = false, verifyMax = -1;
+  function verifyDrawing() {
+    try {
+      const gl = renderer.getContext(), w = canvas.width, h = canvas.height, px = new Uint8Array(4 * 36);
+      gl.readPixels((w >> 1) - 3, (h >> 1) - 3, 6, 6, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      verifyMax = 0; for (let i = 0; i < px.length; i++) verifyMax = Math.max(verifyMax, px[i]);
+      if (verifyMax < 8) o.onFallback("the 3D canvas drew nothing");
+    } catch (e) { /* cannot read back here: trust the render */ }
+  }
+
   function frame(now) {
     raf = 0; if (disposed) return;
     if (!(paused || hiddenTab || !inView)) raf = requestAnimationFrame(frame);
@@ -132,6 +144,7 @@ export function create(host, opts = {}) {
     const dtms = last ? Math.min(100, Math.max(0, now - last)) || 16 : 16; last = now; lastDraw = now;     // never negative: a slow first frame must not run time backwards
     step(dtms / 1000); draw(); dirty = false;
     if (!readyFired) { readyFired = true; o.onReady(); }          // first frame is on screen: shaders are compiled, safe to reveal
+    if (!verified && intro >= 0.99) { verified = true; verifyDrawing(); }
     if (o.adapt && cap >= 50 && document.hasFocus()) {
       perf.ema += (dtms - perf.ema) * 0.08; perf.samples++;
       if (perf.samples > 90 && perf.ema > 27) { if (++perf.bad > 40) { degrade(); perf.bad = 0; perf.samples = 0; perf.ema = 16; } }
@@ -172,7 +185,7 @@ export function create(host, opts = {}) {
     setStatic(b) { staticFrame = !!b; if (staticFrame) { intro = 1; introActive = false; alertT = alertTarget; yawVel = 0; } dirty = true; },
     setFpsCap(n) { fpsCap = clamp(+n || 60, 10, 120); },
     setZoom(z) { zoom = clamp(+z || 1, 0.6, 1.4); layoutCamera(); dirty = true; },
-    getStats() { const i = renderer.info; return { fps: Math.round(1000 / perf.ema), level: perf.level, bloom: quality.bloom, dpr, w: W, h: H, calls: i.render.calls, triangles: i.render.triangles, float: post.hasFloat, intro: +intro.toFixed(3), introActive, time: +time.toFixed(2), alpha: +alertT.toFixed(2) }; },
+    getStats() { const i = renderer.info; return { fps: Math.round(1000 / perf.ema), level: perf.level, bloom: quality.bloom, dpr, w: W, h: H, calls: i.render.calls, triangles: i.render.triangles, float: post.hasFloat, intro: +intro.toFixed(3), introActive, time: +time.toFixed(2), alpha: +alertT.toFixed(2), verified: verifyMax }; },
     dispose() {
       if (disposed) return; disposed = true; cancelAnimationFrame(raf); ac.abort();
       layer.dispose(); S.dispose(); post.dispose(); renderer.dispose();

@@ -69,6 +69,27 @@ def build_mcp() -> FastMCP:
 
 
     @mcp.tool()
+    def post_snapshot(snapshot: dict, bot: str | None = None) -> dict:
+        """Replace this bot's latest structured state for the dashboard. All keys optional:
+        note, tiles[{label,value,trend}], events[{at,title,note,done}], priorities[str],
+        vitals{steps,steps_goal,sleep_hours,heart_rate,recovery,streak},
+        finance{balance,change_30d,series[number],categories[{name,pct}],bills[{name,amount,due}]}.
+        Unknown keys are rejected with an error message."""
+        return core.post_snapshot(_bot_or_arg(bot), snapshot)
+
+    @mcp.tool()
+    def request_approval(title: str, detail: str = "", amount: str = "", bot: str | None = None) -> dict:
+        """Ask the owner to approve something BEFORE doing it (posting, paying, sending).
+        Returns an id. The owner decides on the dashboard; you are then given a task starting
+        with APPROVED or DECLINED. Never carry out the action until it is approved."""
+        return core.request_approval(_bot_or_arg(bot), title, detail, amount)
+
+    @mcp.tool()
+    def get_approval(approval_id: int, bot: str | None = None) -> dict:
+        """Check the status (pending, approved, declined) of one of your approval requests."""
+        return core.get_approval(_bot_or_arg(bot), approval_id)
+
+    @mcp.tool()
     def list_briefs(hours: int = 24, bot: str | None = None) -> list[dict]:
         """(Admin) Recent briefs from all bots, newest first."""
         _admin()
@@ -81,6 +102,24 @@ def build_mcp() -> FastMCP:
         _admin()
         return core.create_task(bot, title, detail)
 
+
+    @mcp.tool()
+    def get_dashboard() -> dict:
+        """(Admin) Everything the dashboard shows: bots, snapshots, briefs, tasks, pending approvals, grid."""
+        _admin()
+        return core.dashboard()
+
+    @mcp.tool()
+    def list_approvals(status: str = "pending") -> list[dict]:
+        """(Admin) Read approval requests. Admins can read them but only the owner can decide, on the dashboard."""
+        _admin()
+        return core.list_approvals(status or None)
+
+    @mcp.tool()
+    def get_audit(limit: int = 50) -> list[dict]:
+        """(Admin) Recent audit trail: who did what and when."""
+        _admin()
+        return core.list_audit(limit)
 
     @mcp.tool()
     def get_overview() -> dict:

@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 
 # Bots that must never appear in the shared hub, whatever the config says.
-BLOCKED_BOT_WORDS = ("finance", "dating")
+BLOCKED_BOT_WORDS = ("dating",)
 
 
 def slug(name: str) -> str:
@@ -26,6 +26,8 @@ class Settings:
     synth_model: str = "claude-sonnet-5-5"
     stale_hours: int = 26
     cookie_secure: bool = True
+    owner_name: str = "Mr. Stark"
+    session_hours: int = 24
 
     def validate(self) -> None:
         for name in {**self.bot_tokens, **self.bot_webhooks}:
@@ -74,6 +76,8 @@ def load_settings() -> Settings:
         synth_model=os.environ.get("SYNTH_MODEL", "claude-sonnet-5-5"),
         stale_hours=int(os.environ.get("STALE_HOURS", "26")),
         cookie_secure=os.environ.get("COOKIE_SECURE", "1") != "0",
+        owner_name=os.environ.get("OWNER_NAME", "Mr. Stark").strip()[:60] or "Mr. Stark",
+        session_hours=max(1, min(int(os.environ.get("SESSION_HOURS", "24")), 24 * 30)),
     )
     s.validate()
     return s

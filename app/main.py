@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from itsdangerous import BadSignature, TimestampSigner
 from pydantic import BaseModel, Field
@@ -14,22 +14,34 @@ from . import auth, config, core, db
 from .mcp_server import BearerMiddleware, build_mcp
 
 COOKIE = "hub_session"
-SESSION_AGE = 60 * 60 * 24 * 30
 _login_attempts: dict[str, list[float]] = defaultdict(list)
+
+
+def _session_ok(request: Request) -> bool:
+    cookie = request.cookies.get(COOKIE)
+    if not cookie:
+        return False
+    try:
+        TimestampSigner(config.settings.session_secret).unsign(cookie, max_age=config.settings.session_hours * 3600)
+        return True
+    except BadSignature:
+        return False
 
 
 def principal(request: Request) -> auth.Principal:
     p = auth.from_bearer(request.headers.get("authorization"))
     if p:
         return p
-    cookie = request.cookies.get(COOKIE)
-    if cookie:
-        try:
-            TimestampSigner(config.settings.session_secret).unsign(cookie, max_age=SESSION_AGE)
-            return auth.Principal("admin")
-        except BadSignature:
-            pass
+    if _session_ok(request):
+        return auth.Principal("admin")
     raise HTTPException(401, "Unauthorized")
+
+
+def owner_session(request: Request) -> auth.Principal:
+    """Only a person logged in to the dashboard. Bearer tokens (even admin) are not enough."""
+    if not _session_ok(request):
+        raise HTTPException(403, "Approvals can only be decided from the dashboard")
+    return auth.Principal("admin")
 
 
 def admin(p: auth.Principal = Depends(principal)) -> auth.Principal:
@@ -60,6 +72,16 @@ class TaskIn(BaseModel):
 
 class DoneIn(BaseModel):
     result: str = ""
+
+
+class ApprovalIn(BaseModel):
+    title: str
+    detail: str = ""
+    amount: str = ""
+
+
+class DecideIn(BaseModel):
+    decision: str
 
 
 class LoginIn(BaseModel):
@@ -98,9 +120,11 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
         pw = config.settings.dashboard_password
         import hmac
         if not pw or not hmac.compare_digest(body.password.encode(), pw.encode()):
+            core.audit("dashboard", "login_failed")
             raise HTTPException(401, "Wrong password")
+        core.audit("dashboard", "login")
         token = TimestampSigner(config.settings.session_secret).sign(b"admin").decode()
-        response.set_cookie(COOKIE, token, max_age=SESSION_AGE, httponly=True,
+        response.set_cookie(COOKIE, token, max_age=config.settings.session_hours * 3600, httponly=True,
                             secure=config.settings.cookie_secure, samesite="lax")
         return {"ok": True}
 
@@ -122,7 +146,35 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     def done(task_id: int, d: DoneIn, p: auth.Principal = Depends(bot_only)):
         return core.complete_task(p.bot, task_id, d.result)
 
+    @app.post("/ingest/snapshot")
+    def ingest_snapshot(snap: dict = Body(...), p: auth.Principal = Depends(bot_only)):
+        return core.post_snapshot(p.bot, snap)
+
+    @app.post("/ingest/approvals")
+    def ingest_approval(a: ApprovalIn, p: auth.Principal = Depends(bot_only)):
+        return core.request_approval(p.bot, a.title, a.detail, a.amount)
+
+    @app.get("/ingest/approvals/{approval_id}")
+    def ingest_approval_status(approval_id: int, p: auth.Principal = Depends(bot_only)):
+        return core.get_approval(p.bot, approval_id)
+
     # --- admin / dashboard ---
+    @app.get("/api/dashboard")
+    def dash(_: auth.Principal = Depends(admin)):
+        return core.dashboard()
+
+    @app.get("/api/approvals")
+    def approvals(status: str = "pending", _: auth.Principal = Depends(admin)):
+        return core.list_approvals(status or None)
+
+    @app.post("/api/approvals/{approval_id}/decide")
+    def decide(approval_id: int, d: DecideIn, _: auth.Principal = Depends(owner_session)):
+        return core.decide_approval(approval_id, d.decision, actor="owner")
+
+    @app.get("/api/audit")
+    def audit_log(limit: int = 100, _: auth.Principal = Depends(admin)):
+        return core.list_audit(limit)
+
     @app.get("/api/overview")
     def overview(_: auth.Principal = Depends(admin)):
         return core.overview()

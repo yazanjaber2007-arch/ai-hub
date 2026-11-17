@@ -48,6 +48,37 @@ class Synthesis(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
 
 
+class SnapshotRow(Base):
+    """Latest structured state per bot (overwritten each run)."""
+    __tablename__ = "snapshots"
+    bot: Mapped[str] = mapped_column(String(64), primary_key=True)
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Approval(Base):
+    __tablename__ = "approvals"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    bot: Mapped[str] = mapped_column(String(64), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    detail: Mapped[str] = mapped_column(Text, default="")
+    amount: Mapped[str] = mapped_column(String(40), default="")
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class Audit(Base):
+    """Append-only record of who did what."""
+    __tablename__ = "audit"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    actor: Mapped[str] = mapped_column(String(64), index=True)
+    action: Mapped[str] = mapped_column(String(32), index=True)
+    target: Mapped[str] = mapped_column(String(64), default="")
+    detail: Mapped[str] = mapped_column(String(300), default="")
+
+
 class BotSeen(Base):
     __tablename__ = "bot_seen"
     bot: Mapped[str] = mapped_column(String(64), primary_key=True)

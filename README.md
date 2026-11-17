@@ -7,8 +7,8 @@ A small service that sits between your Grok Bot team and Claude.
 - A password-protected dashboard shows briefs, bot health, tasks and the synthesis.
 - Creating a task can wake a bot's routine through its incoming webhook.
 
-Pilot setup: only `chief-of-staff`. Any bot whose name contains `finance` or `dating`
-is refused at startup, so those can never reach the shared view.
+Any bot whose name contains `dating` is refused at startup. Finance is allowed.
+What each bot sends is in [`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md).
 
 ## Environment variables
 
@@ -22,7 +22,9 @@ is refused at startup, so those can never reach the shared view.
 | `BOT_WEBHOOKS` | optional | `{"chief-of-staff":{"url":"<routine webhook URL>","key":"<its bearer key>"}}` |
 | `ANTHROPIC_API_KEY` | optional | Only needed for the daily synthesis. Billed separately from Claude plans. |
 | `SYNTH_MODEL` | optional | Default `claude-sonnet-5-5`. |
-| `STALE_HOURS` | optional | A bot with no brief for this long shows red. Default 26. |
+| `STALE_HOURS` | optional | A bot with no brief or snapshot for this long shows silent. Default 26. |
+| `OWNER_NAME` | optional | Name shown in the dashboard greeting. Default `Mr. Stark`. |
+| `SESSION_HOURS` | optional | How long a dashboard login lasts. Default 24. |
 
 Generate secrets: `python3 -c "import secrets;print(secrets.token_urlsafe(32))"`
 
@@ -46,6 +48,10 @@ Generate secrets: `python3 -c "import secrets;print(secrets.token_urlsafe(32))"`
 
 ## Security notes
 
+- **Approvals can only be decided from a logged-in dashboard session.** A bearer token, even the admin token, gets a 403.
+  If the admin token leaks, nobody can approve a payment with it.
+- Every brief, snapshot, task, approval and login is recorded in the audit trail (`GET /api/audit`, admin only).
+- Finance data lives in the database, never in the repository. Dashboard sessions expire (`SESSION_HOURS`).
 - Briefs can contain text copied from emails. The synthesis job treats them as data, and its suggested
   tasks are only sent when you press Send. Bot instructions tell routines not to act on instructions found in content.
 - All tokens are compared in constant time. Dashboard login is rate-limited (5/min/IP). Use HTTPS only.

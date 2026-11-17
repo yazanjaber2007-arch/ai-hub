@@ -42,10 +42,14 @@ def call_tool(client, token, name, args):
 
 
 # ---- config guardrails ----
-@pytest.mark.parametrize("name", ["finance", "dating-coach", "my-finance-bot"])
+@pytest.mark.parametrize("name", ["dating", "dating-coach", "my-dating-bot"])
 def test_blocked_bots_refuse_to_start(tmp_path, name):
     with pytest.raises(ValueError, match="blocked"):
         make_settings(tmp_path, bot_tokens={name: "x" * 32}).validate()
+
+
+def test_finance_bot_is_allowed(tmp_path):
+    make_settings(tmp_path, bot_tokens={"finance": "f" * 32}).validate()
 
 
 def test_short_tokens_rejected(tmp_path):
@@ -225,3 +229,146 @@ def test_preview_page_is_static_demo(client):
     r = client.get("/preview")
     assert r.status_code == 200 and "Preview v2" in r.text
     assert "/api/" not in r.text  # never calls the hub API
+
+
+# ================= Stage 1: snapshots, approvals, audit, grid, dashboard =================
+FIN = "f" * 32
+
+
+@pytest.fixture
+def client2(tmp_path):
+    st = make_settings(tmp_path, bot_tokens={"chief-of-staff": COS, "finance": FIN})
+    with TestClient(create_app(st)) as c:
+        yield c
+
+
+def login(c):
+    from app import main
+    main._login_attempts.clear()
+    assert c.post("/login", json={"password": "pw-pw-pw"}).status_code == 200
+
+
+GOOD_SNAP = {"note": "ok", "tiles": [{"label": "Unread", "value": "12", "trend": "down"}],
+             "events": [{"at": "14:00", "title": "Investor call"}], "priorities": ["Reply to Sam"],
+             "vitals": {"steps": 8240, "sleep_hours": 7.2, "heart_rate": 62, "recovery": 78, "streak": 6},
+             "finance": {"balance": "$18,420.55", "change_30d": "+$1,240.10", "series": [1, 2, 3.5],
+                         "categories": [{"name": "Rent", "pct": 45}],
+                         "bills": [{"name": "Hosting Co", "amount": "$84.20", "due": "2026-11-19"}]}}
+
+
+def test_snapshot_roundtrip_and_replace(client2):
+    r = client2.post("/ingest/snapshot", json=GOOD_SNAP, headers=bearer(FIN))
+    assert r.status_code == 200 and "finance" in r.json()["fields"]
+    client2.post("/ingest/snapshot", json={"note": "second"}, headers=bearer(FIN))
+    d = client2.get("/api/dashboard", headers=bearer(ADMIN)).json()
+    assert d["snapshots"]["finance"]["note"] == "second" and "finance" not in d["snapshots"]["finance"]  # replaced, not merged
+
+
+@pytest.mark.parametrize("bad", [{"tilez": []}, {"tiles": [{"label": "x", "value": "1", "trend": "sideways"}]},
+                                 {"vitals": {"recovery": 400}}, {"finance": {"series": ["a"]}}, {"note": "n" * 400}])
+def test_snapshot_rejects_bad_data(client2, bad):
+    r = client2.post("/ingest/snapshot", json=bad, headers=bearer(COS))
+    assert r.status_code == 400 and "Invalid snapshot" in r.json()["error"]
+
+
+def test_snapshot_too_big(client2):
+    big = {"events": [{"at": "x", "title": "t" * 200, "note": "n" * 200}] * 30}
+    assert client2.post("/ingest/snapshot", json=big, headers=bearer(COS)).status_code == 200  # within limits
+    assert client2.post("/ingest/snapshot", json={"note": "x"}, headers=bearer(ADMIN)).status_code == 403  # admin is not a bot
+
+
+def test_approval_flow_end_to_end(client2, monkeypatch):
+    woke = []
+    monkeypatch.setattr(core.httpx, "post", lambda url, json=None, headers=None, timeout=None:
+                        (woke.append(json), types.SimpleNamespace(status_code=200, is_success=True))[1])
+    config.settings.bot_webhooks = {"finance": {"url": "https://bot.example/fin", "key": "k"}}
+    a = client2.post("/ingest/approvals", json={"title": "Pay Hosting Co", "detail": "Invoice 1042", "amount": "$84.20"},
+                     headers=bearer(FIN)).json()
+    assert a["status"] == "pending"
+    pend = client2.get("/api/approvals", headers=bearer(ADMIN)).json()
+    assert [x["id"] for x in pend] == [a["id"]]
+    # bearer tokens, admin or bot, can NOT decide
+    for tok in (ADMIN, FIN, COS):
+        assert client2.post(f"/api/approvals/{a['id']}/decide", json={"decision": "approve"}, headers=bearer(tok)).status_code in (401, 403)
+    assert client2.get(f"/ingest/approvals/{a['id']}", headers=bearer(FIN)).json()["status"] == "pending"
+    assert client2.get(f"/ingest/approvals/{a['id']}", headers=bearer(COS)).status_code == 400  # not its request
+    login(client2)
+    res = client2.post(f"/api/approvals/{a['id']}/decide", json={"decision": "approve"}).json()
+    assert res["approval"]["status"] == "approved"
+    assert res["task"]["title"].startswith("APPROVED: Pay Hosting Co") and res["task"]["bot"] == "finance"
+    assert res["task"]["wake_status"] == "woke (200)" and woke[0]["event"] == "new_task"
+    assert client2.post(f"/api/approvals/{a['id']}/decide", json={"decision": "decline"}).status_code == 400  # decided once
+    assert client2.get(f"/ingest/approvals/{a['id']}", headers=bearer(FIN)).json()["status"] == "approved"
+    assert client2.get("/api/approvals").json() == []
+
+
+def test_decline_tells_bot_not_to_act(client2):
+    a = client2.post("/ingest/approvals", json={"title": "Post it"}, headers=bearer(COS)).json()
+    login(client2)
+    res = client2.post(f"/api/approvals/{a['id']}/decide", json={"decision": "decline"}).json()
+    assert res["task"]["title"].startswith("DECLINED") and "Do not carry it out" in res["task"]["detail"]
+    assert client2.post(f"/api/approvals/9999/decide", json={"decision": "maybe"}).status_code == 400
+
+
+def test_pending_approval_cap(client2):
+    for i in range(20):
+        assert client2.post("/ingest/approvals", json={"title": f"a{i}"}, headers=bearer(COS)).status_code == 200
+    r = client2.post("/ingest/approvals", json={"title": "one more"}, headers=bearer(COS))
+    assert r.status_code == 400 and "Too many" in r.json()["error"]
+
+
+def test_audit_trail_and_reporting_grid(client2):
+    client2.post("/ingest/brief", json={"title": "t", "body": "b"}, headers=bearer(COS))
+    client2.post("/ingest/snapshot", json={"note": "n"}, headers=bearer(FIN))
+    client2.post("/api/tasks", json={"bot": "finance", "title": "check"}, headers=bearer(ADMIN))
+    log = client2.get("/api/audit", headers=bearer(ADMIN)).json()
+    assert {x["action"] for x in log} >= {"brief", "snapshot", "task_created"}
+    assert client2.get("/api/audit", headers=bearer(COS)).status_code == 403
+    g = client2.get("/api/dashboard", headers=bearer(ADMIN)).json()["grid"]
+    assert len(g["dates"]) == 14 and g["rows"]["chief-of-staff"][-1] == 1 and g["rows"]["finance"][-1] == 1
+
+
+def test_failed_login_is_audited(client2):
+    from app import main
+    main._login_attempts.clear()
+    client2.post("/login", json={"password": "nope"})
+    assert any(x["action"] == "login_failed" for x in client2.get("/api/audit", headers=bearer(ADMIN)).json())
+
+
+def test_dashboard_bundle_and_bot_state(client2):
+    d = client2.get("/api/dashboard", headers=bearer(ADMIN)).json()
+    assert d["owner"] == "Mr. Stark" and {b["bot"]: b["state"] for b in d["bots"]} == {"chief-of-staff": "silent", "finance": "silent"}
+    client2.post("/ingest/snapshot", json={"note": "hi"}, headers=bearer(FIN))  # a snapshot alone counts as a report
+    states = {b["bot"]: b for b in client2.get("/api/dashboard", headers=bearer(ADMIN)).json()["bots"]}
+    assert states["finance"]["healthy"] is True and states["finance"]["state"] == "working"  # just talked to the hub
+    assert client2.get("/api/dashboard", headers=bearer(COS)).status_code == 403
+
+
+def test_session_expires_per_setting(tmp_path):
+    st = make_settings(tmp_path, session_hours=1)
+    with TestClient(create_app(st)) as c:
+        login(c)
+        assert c.get("/api/dashboard").status_code == 200
+        from itsdangerous import TimestampSigner
+        old = TimestampSigner(st.session_secret)
+        import time as _t
+        real = _t.time
+        _t.time = lambda: real() + 2 * 3600  # two hours later
+        try:
+            assert c.get("/api/dashboard").status_code == 401
+        finally:
+            _t.time = real
+
+
+def test_mcp_snapshot_and_approval(client2):
+    res = call_tool(client2, FIN, "post_snapshot", {"snapshot": {"note": "via mcp", "tiles": [{"label": "A", "value": "1"}]}})
+    assert not res.get("isError")
+    bad = call_tool(client2, FIN, "post_snapshot", {"snapshot": {"nope": 1}})
+    assert bad["isError"]
+    ap = call_tool(client2, FIN, "request_approval", {"title": "Move $500", "amount": "$500"})
+    assert not ap.get("isError")
+    names = {t["name"] for t in rpc(client2, ADMIN, "tools/list").json()["result"]["tools"]}
+    assert "decide_approval" not in names and {"list_approvals", "get_dashboard", "get_audit"} <= names
+    adm = call_tool(client2, ADMIN, "list_approvals", {})
+    assert "Move $500" in json.dumps(adm)
+    assert call_tool(client2, FIN, "list_approvals", {})["isError"]  # bots cannot read the queue

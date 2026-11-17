@@ -397,3 +397,9 @@ def test_preview_is_not_demo_and_not_indexed(client):
     r = client.get("/preview")
     assert 'data-mode="demo"' not in r.text and "noindex" in r.headers["x-robots-tag"]
     assert "setPriv(false)" in r.text  # finance is shown by default
+
+
+def test_live_page_has_metrics_panel_and_demo_too(client):
+    for path in ("/command", "/demo", "/preview"):
+        t = client.get(path).text
+        assert 'id="pMet"' in t and "renderMetrics" in t, path

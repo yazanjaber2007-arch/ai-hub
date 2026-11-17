@@ -146,6 +146,14 @@ svg.spark{width:100%;height:62px}
 .ring .dn2::after{content:"";width:48px;height:48px;border-radius:50%;background:#071626}
 .leg2{display:grid;gap:2px;font:11px var(--mono);color:var(--mute)}
 .leg2 i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+/* metrics */
+.met{display:grid;gap:12px}
+.mg .mh{display:flex;align-items:center;gap:8px;margin-bottom:5px;font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--c,var(--cyan))}
+.mg .mh svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.mg .mh em{margin-left:auto;font:11px var(--mono);color:var(--mute);font-style:normal;text-transform:none;letter-spacing:0}
+.mr{display:flex;justify-content:space-between;gap:12px;font-size:13px;border-bottom:1px solid var(--line);padding:5px 0}
+.mr span{color:var(--mute);overflow-wrap:anywhere}.mr b{font:700 13px var(--mono);text-align:right;overflow-wrap:anywhere}
+.mr b.up::after{content:" ▲";color:var(--teal);font-size:10px}.mr b.down::after{content:" ▼";color:var(--red);font-size:10px}.mr b.flat::after{content:" –";color:var(--mute)}
 /* vitals */
 .vit{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center}
 .body{position:relative;width:96px;height:170px}
@@ -251,6 +259,7 @@ svg.spark{width:100%;height:62px}
     <div class="leg">less <i style="background:rgba(25,211,255,.3)"></i><i style="background:rgba(25,211,255,.6)"></i><i style="background:var(--cyan)"></i> more <i style="border:1px solid var(--red);background:rgba(255,77,94,.18);margin-left:8px"></i> missed</div></section>
   <section class="panel" id="pFeed"><div class="ph"><h2>Live feed</h2><span class="tag LIVE">LIVE</span></div><div class="feed" id="feedList"></div></section>
   <section class="panel" id="pFin"><div class="ph"><h2>Finance</h2><span id="finSub"></span></div><div id="finBody"></div></section>
+  <section class="panel" id="pMet"><div class="ph"><h2>Metrics</h2><span id="metSub"></span></div><div class="met" id="metBody"></div></section>
   <section class="panel" id="pVit"><div class="ph"><h2>Vitals</h2><span id="vitSub"></span></div><div id="vitBody"></div></section>
 </div>
 
@@ -280,11 +289,12 @@ function glyphFor(n) { n = n.toLowerCase();
   if (/fin|money|bank|cash|budget/.test(n)) return GL.coin; return GL.dot; }
 const ago = iso => { if (!iso) return "never"; const m = Math.round((Date.now() - new Date(iso)) / 60000);
   return m < 1 ? "now" : m < 60 ? m + "m" : m < 1440 ? Math.round(m / 60) + "h" : Math.round(m / 1440) + "d"; };
+const agoT = iso => { const a = ago(iso); return a === "now" ? "just now" : a === "never" ? "never" : a + " ago"; };
 const span = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? Math.floor(m / 60) + "h " + (m % 60) + "m" : m + "m"; };
 function parseWhen(at) { if (!at) return null; const m = /^(\d{1,2}):(\d{2})$/.exec(String(at).trim());
   if (m) { const d = new Date(); d.setHours(+m[1], +m[2], 0, 0); return d.getTime(); } const t = Date.parse(at); return isNaN(t) ? null : t; }
 const hhmm = t => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-const emptyModel = () => ({ owner: "", bots: [], feed: [], needs: [], timeline: [], heat: null, finance: null, vitals: null, brief: [], headline: "Loading…", now: null, alert: null });
+const emptyModel = () => ({ owner: "", bots: [], metrics: [], feed: [], needs: [], timeline: [], heat: null, finance: null, vitals: null, brief: [], headline: "Loading…", now: null, alert: null });
 
 let M = emptyModel(), OB = [], hover = -1;
 const pulses = [], ripples = [], pos = [];
@@ -299,13 +309,17 @@ function demoModel() {
   const raw = [["chief-of-staff", "working", "3 meetings · 1 conflict", min(14)], ["inbox", "working", "12 unread · 2 urgent", min(32)], ["social", "idle", "3 posts queued", min(95)],
     ["fitness", "idle", "8,240 steps · 6d streak", min(400)], ["finance", demoAlert ? "silent" : "idle", "2 bills due soon", demoAlert ? min(1600) : min(300)]];
   const bots = raw.map((r, i) => ({ id: r[0], state: r[1], note: r[2], last: r[3], color: PALETTE[i], glyph: glyphFor(r[0]), sens: r[0] === "finance" }));
+  const T = { "chief-of-staff": [["Meetings today", "3"], ["Conflicts", "1", "down"]], inbox: [["Unread", "12", "down"], ["Urgent", "2"], ["Awaiting reply", "5"]],
+    social: [["Instagram views 7d", "6,448", "up"], ["TikTok views 7d", "2,544", "up"], ["Videos posted 7d", "4"], ["Top post", "Little angus"]], fitness: [["Workouts this week", "3"], ["Active streak", "6 days", "up"]],
+    finance: [["Bills due 7d", "2"], ["Card balance owed", "$2,008.83"]] };
+  const metrics = bots.map((b, i) => ({ bot: b.id, color: b.color, glyph: b.glyph, sens: b.sens, updated: raw[i][3], tiles: T[b.id].map(t => ({ label: t[0], value: t[1], trend: t[2] })) }));
   let s = 7; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280, rows = {};
   bots.forEach(b => { rows[b.id] = Array.from({ length: 14 }, (_, d) => { const v = rnd(); return (b.id === "finance" && d > 11) ? 0 : v < .1 ? 0 : v < .35 ? 1 : v < .7 ? 2 : 3; }); });
   const ev = [[-200, "Morning briefing delivered", "chief-of-staff", true], [-150, "Daily stand-up", "calendar", true], [38, "Reply to Sam (deadline)", "inbox"], [132, "Investor call", "conflicts with dentist"], [380, "Evening run", "fitness"]];
   let nextSet = false;
   const timeline = ev.map(e => { const t = now + e[0] * 60000, o = { at: hhmm(t), text: e[1], note: e[2] || "", done: !!e[3] };
     if (!o.done && !nextSet) { o.next = true; nextSet = true; } if (!o.done) { o.inMs = t - now; o.progress = Math.max(5, 100 - e[0] / 180 * 100); } return o; });
-  return { owner: GUEST, bots, timeline, heat: { dates: [], rows }, now: { lb: "Right now", title: "Reply to Sam before the noon deadline", due: now + 38 * 60000,
+  return { owner: GUEST, bots, metrics, timeline, heat: { dates: [], rows }, now: { lb: "Right now", title: "Reply to Sam before the noon deadline", due: now + 38 * 60000,
       acts: [{ label: "Open draft", cls: "ok", fn: () => toast("Opening draft (demo)") }, { label: "Snooze 1h", cls: "", fn: () => toast("Snoozed 1h (demo)") }] },
     needs: DEMO_NEEDS, alert: demoAlert ? "Finance has been silent for 26 hours · last report 07:04 yesterday" : null,
     headline: demoAlert ? "Finance has gone quiet. Everything else is fine." : "3 things need you today. Everything else is handled.",
@@ -327,9 +341,10 @@ async function api(path, opt = {}) {
 }
 function liveModel(d) {
   const now = Date.now(), snaps = d.snapshots || {}, order = d.bots.map(b => b.bot);
-  const note = b => { const s = snaps[b]; if (!s) return ""; return (s.tiles && s.tiles.length) ? s.tiles.slice(0, 2).map(t => t.label + " " + t.value).join(" · ") : (s.note || ""); };
+  const note = b => { const s = snaps[b]; if (!s) return ""; return s.note || ((s.tiles && s.tiles.length) ? s.tiles[0].label + " " + s.tiles[0].value : ""); };
   const bots = d.bots.map((b, i) => ({ id: b.bot, state: b.last_report ? b.state : "waiting", note: note(b.bot), last: b.last_report, color: PALETTE[i % PALETTE.length], glyph: glyphFor(b.bot), sens: !!(snaps[b.bot] && snaps[b.bot].finance) }));
   const sensBots = new Set(bots.filter(b => b.sens).map(b => b.id));
+  const metrics = bots.filter(b => snaps[b.id] && (snaps[b.id].tiles || []).length).map(b => ({ bot: b.id, color: b.color, glyph: b.glyph, sens: b.sens, tiles: snaps[b.id].tiles, updated: snaps[b.id].updated_at }));
   const feed = d.briefs.map(b => ({ sens: sensBots.has(b.bot), tag: b.kind === "alert" ? "URGENT" : b.priority === "high" ? "WARN" : b.priority === "low" ? "TIP" : "INFO", title: b.title,
     body: (b.body.length > 140 ? b.body.slice(0, 140) + "…" : b.body) + " · " + b.bot, at: b.created_at }));
   const needs = d.approvals.map(a => ({ id: a.id, title: a.title, meta: a.bot + (a.detail ? " · " + a.detail.slice(0, 80) : ""), amount: a.amount, bot: a.bot }));
@@ -359,8 +374,8 @@ function liveModel(d) {
   needs.forEach(n => brief.push({ t: "Waiting for your approval: " + n.title, sens: sensBots.has(n.bot) })); silent.forEach(b => brief.push({ t: b.id + " has stopped reporting (last: " + ago(b.last) + " ago)." }));
   if (fin) fin.bills.filter(x => !isNaN(x.dueMs) && x.dueMs - now < 3 * 864e5).forEach(x => brief.push({ t: "Bill due soon: " + x.name + " " + x.amount, sens: true }));
   if (vb && snaps[vb].vitals.streak) brief.push({ t: "Streak: " + snaps[vb].vitals.streak + " days." });
-  const alertTxt = silent.length ? silent.map(b => b.id).join(", ") + (silent.length > 1 ? " have" : " has") + " stopped reporting · last report " + ago(silent[0].last) + " ago" : null;
-  return { owner: d.owner, bots, feed, needs, timeline, heat: d.grid, finance: fin, vitals: vb ? { ...snaps[vb].vitals, src: vb + " · " + ago(snaps[vb].updated_at) + " ago" } : null,
+  const alertTxt = silent.length ? silent.map(b => b.id).join(", ") + (silent.length > 1 ? " have" : " has") + " stopped reporting · last report " + agoT(silent[0].last) : null;
+  return { owner: d.owner, bots, metrics, feed, needs, timeline, heat: d.grid, finance: fin, vitals: vb ? { ...snaps[vb].vitals, src: vb + " · " + agoT(snaps[vb].updated_at) } : null,
     brief, headline, now: rn, alert: alertTxt, waitingAll: bots.length > 0 && waiting.length === bots.length, nextEv };
 }
 let prevLast = {};
@@ -379,7 +394,7 @@ function setModel(m) {
     rf: n <= 1 ? .62 : .34 + .66 * i / (n - 1), spd: o ? o.spd : SPD[i % 7], a: o ? o.a : i * 2.4 + .4 }; });
   renderAll();
 }
-function renderAll() { renderChrome(); renderRoster(); renderNeeds(); renderNow(); renderFeed(); renderTimeline(); renderHeat(); renderFinance(); renderVitals(); if (reduce) draw(performance.now()); measure(); }
+function renderAll() { renderChrome(); renderRoster(); renderNeeds(); renderNow(); renderFeed(); renderTimeline(); renderHeat(); renderMetrics(); renderFinance(); renderVitals(); if (reduce) draw(performance.now()); measure(); }
 function renderChrome() {
   const silent = M.bots.filter(b => b.state === "silent").length, wait = M.bots.length > 0 && M.bots.every(b => b.state === "waiting");
   document.body.classList.toggle("alert", !!M.alert); document.body.classList.toggle("wait", wait);
@@ -400,7 +415,7 @@ function renderRoster() {
   const r = clear($("rosList"));
   if (!M.bots.length) r.append(el("div", "empty", "No bots configured yet."));
   M.bots.forEach(b => { const row = el("div", "rb"), g = el("div", "gl " + b.state); g.style.setProperty("--c", b.color); g.innerHTML = '<svg viewBox="0 0 24 24">' + b.glyph + "</svg>";
-    const m = el("div"); m.append(el("div", "n", b.id), sensEl(el("div", "s", b.state === "silent" ? "no report for " + ago(b.last) : b.state === "waiting" ? "waiting for first report" : (b.note || "last report " + ago(b.last) + " ago")), b.sens && b.state !== "silent" && b.state !== "waiting"));
+    const m = el("div"); m.append(el("div", "n", b.id), sensEl(el("div", "s", b.state === "silent" ? "no report for " + ago(b.last) : b.state === "waiting" ? "waiting for first report" : (b.note || "last report " + agoT(b.last))), b.sens && b.state !== "silent" && b.state !== "waiting"));
     row.append(g, m, el("div", "k " + b.state, b.state)); r.append(row); });
   $("rosSub").textContent = M.bots.filter(b => b.state === "working" || b.state === "idle").length + "/" + M.bots.length + " online";
 }
@@ -439,6 +454,12 @@ function renderHeat() {
   ids.forEach(id => { const r = el("div", "hr"), c = el("div", "hc"), counts = rows[id], first = counts.findIndex(v => v > 0); r.append(el("span", null, id), c);
     counts.forEach((v, i) => { const x = document.createElement("i"); x.className = first === -1 || i < first ? "blank" : v === 0 ? "miss" : v === 1 ? "l1" : v === 2 ? "l2" : "l3"; c.append(x); }); h.append(r); });
 }
+function renderMetrics() {
+  const b = clear($("metBody")), groups = M.metrics || []; $("metSub").textContent = groups.length ? groups.reduce((n, g) => n + g.tiles.length, 0) + " numbers" : "";
+  if (!groups.length) { b.append(el("div", "empty", "Appears when a bot sends numbers.")); return; }
+  groups.forEach(g => { const d = el("div", "mg"), h = el("div", "mh"); h.style.setProperty("--c", g.color); h.innerHTML = '<svg viewBox="0 0 24 24">' + g.glyph + "</svg>"; h.append(document.createTextNode(g.bot), el("em", null, g.updated ? agoT(g.updated) : "")); d.append(h);
+    g.tiles.forEach(t => { const r = el("div", "mr"); r.append(el("span", null, t.label), sensEl(el("b", t.trend || "", t.value), g.sens)); d.append(r); }); b.append(d); });
+}
 function renderFinance() {
   const b = clear($("finBody")), f = M.finance; $("finSub").textContent = f ? "tap numbers to reveal" : "";
   if (!f) { b.append(el("div", "empty", "Waiting for the finance bot's first report.")); return; }
@@ -471,8 +492,8 @@ function renderVitals() {
 }
 
 /* ================= layout ================= */
-const DESK = { colL: ["pNeed", "pRos", "pVit"], colC: ["pCore", "pNow", "pTl", "pHeat"], colR: ["pFeed", "pFin"] };
-const PHONE = { "s-brief": ["pNow", "pNeed", "pFeed", "pTl"], "s-bots": ["pCore", "pRos", "pHeat"], "s-money": ["pFin"], "s-body": ["pVit"] };
+const DESK = { colL: ["pNeed", "pRos", "pMet", "pVit"], colC: ["pCore", "pNow", "pTl", "pHeat"], colR: ["pFeed", "pFin"] };
+const PHONE = { "s-brief": ["pNow", "pNeed", "pFeed", "pTl"], "s-bots": ["pCore", "pRos", "pMet", "pHeat"], "s-money": ["pFin"], "s-body": ["pVit"] };
 function layout() { const map = mq.matches ? PHONE : DESK; for (const [host, ids] of Object.entries(map)) ids.forEach(id => $(host).append($(id))); measure(); sizeCanvas(); }
 function measure() { const r = document.documentElement.style, f = document.querySelector(".status").offsetHeight, t = $("tabs").offsetHeight || 40;
   r.setProperty("--foot", f + "px"); r.setProperty("--chrome", (document.querySelector(".top").offsetHeight + (document.getElementById("band").offsetHeight || 0) + f + t + 4) + "px"); }
@@ -516,7 +537,7 @@ document.addEventListener("visibilitychange", () => { run = !reduce && !document
 cv.addEventListener("pointermove", e => { const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; hover = pos.findIndex(p => p && Math.hypot(p.x - x, p.y - y) < p.r);
   const tip = $("tip"); if (hover >= 0) { tip.textContent = OB[hover].id + " · " + safeNote(OB[hover]); tip.style.left = Math.min(x + 12, W - 190) + "px"; tip.style.top = (y - 30) + "px"; tip.style.opacity = 1; cv.style.cursor = "pointer"; } else { tip.style.opacity = 0; cv.style.cursor = "default"; } });
 cv.addEventListener("pointerleave", () => { hover = -1; $("tip").style.opacity = 0; });
-cv.addEventListener("click", () => { if (hover >= 0) { const b = OB[hover]; toast(b.id + " · " + (b.state === "waiting" ? "waiting for first report" : "last report " + ago(b.last) + " ago")); } });
+cv.addEventListener("click", () => { if (hover >= 0) { const b = OB[hover]; toast(b.id + " · " + (b.state === "waiting" ? "waiting for first report" : "last report " + agoT(b.last))); } });
 $("privBtn").addEventListener("click", () => { if (M) renderAll(); });
 new ResizeObserver(() => sizeCanvas()).observe($("cw"));
 

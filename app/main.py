@@ -148,6 +148,10 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     def index():
         return FileResponse(static / "index.html", headers={"Cache-Control": "no-store"})
 
+    @app.get("/command")
+    def command():
+        return FileResponse(static / "command.html", headers={"Cache-Control": "no-store"})
+
     # MCP last, so it doesn't shadow the routes above. Endpoint: /mcp
     app.mount("/", BearerMiddleware(mcp.streamable_http_app()))
     return app

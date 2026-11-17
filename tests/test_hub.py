@@ -213,3 +213,9 @@ def test_task_author_label(client):
     assert client.post("/login", json={"password": "pw-pw-pw"}).status_code == 200
     via_dashboard = client.post("/api/tasks", json={"bot": "chief-of-staff", "title": "b"}).json()
     assert via_dashboard["created_by"] == "owner"
+
+
+def test_command_center_page_served_without_data(client):
+    r = client.get("/command")
+    assert r.status_code == 200 and "<title>Command Center</title>" in r.text
+    assert "briefs" not in client.get("/command?demo=1").text.split("<script>")[0]  # page holds no live data

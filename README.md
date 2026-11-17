@@ -18,7 +18,7 @@ is refused at startup, so those can never reach the shared view.
 | `BOT_TOKENS` | yes | JSON, one token per bot: `{"chief-of-staff":"<24+ chars>"}`. A bot can only act as itself. |
 | `SESSION_SECRET` | yes | 24+ chars, signs the dashboard cookie. |
 | `DASHBOARD_PASSWORD` | yes | Dashboard login. |
-| `DATABASE_URL` | yes on Railway | Provided by the Railway Postgres plugin. |
+| `DATABASE_URL` | yes on Railway | On the hub service, add a variable with the value `${{Postgres.DATABASE_URL}}` (a reference to the Postgres service). Railway does not share it automatically. |
 | `BOT_WEBHOOKS` | optional | `{"chief-of-staff":{"url":"<routine webhook URL>","key":"<its bearer key>"}}` |
 | `ANTHROPIC_API_KEY` | optional | Only needed for the daily synthesis. Billed separately from Claude plans. |
 | `SYNTH_MODEL` | optional | Default `claude-sonnet-5-5`. |
@@ -29,7 +29,7 @@ Generate secrets: `python3 -c "import secrets;print(secrets.token_urlsafe(32))"`
 ## Deploy on Railway
 
 1. New project from this folder (or a GitHub repo containing it). `railway.json` sets the start command.
-2. Add the **Postgres** plugin. Railway sets `DATABASE_URL`.
+2. Add a **PostgreSQL** database to the project, then on the hub service add the variable `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`.
 3. Set the variables above. Generate a public domain. Check `https://<domain>/health`.
 4. Daily synthesis (optional): add a Railway cron service with command `python -m app.synth`, e.g. `0 7 * * *`.
    Or call `POST /api/synthesis/run` with the admin token.

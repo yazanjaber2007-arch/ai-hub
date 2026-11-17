@@ -298,7 +298,7 @@ function demoModel() {
   const now = Date.now(), min = n => new Date(now - n * 60000).toISOString();
   const raw = [["chief-of-staff", "working", "3 meetings · 1 conflict", min(14)], ["inbox", "working", "12 unread · 2 urgent", min(32)], ["social", "idle", "3 posts queued", min(95)],
     ["fitness", "idle", "8,240 steps · 6d streak", min(400)], ["finance", demoAlert ? "silent" : "idle", "2 bills due soon", demoAlert ? min(1600) : min(300)]];
-  const bots = raw.map((r, i) => ({ id: r[0], state: r[1], note: r[2], last: r[3], color: PALETTE[i], glyph: glyphFor(r[0]) }));
+  const bots = raw.map((r, i) => ({ id: r[0], state: r[1], note: r[2], last: r[3], color: PALETTE[i], glyph: glyphFor(r[0]), sens: r[0] === "finance" }));
   let s = 7; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280, rows = {};
   bots.forEach(b => { rows[b.id] = Array.from({ length: 14 }, (_, d) => { const v = rnd(); return (b.id === "finance" && d > 11) ? 0 : v < .1 ? 0 : v < .35 ? 1 : v < .7 ? 2 : 3; }); });
   const ev = [[-200, "Morning briefing delivered", "chief-of-staff", true], [-150, "Daily stand-up", "calendar", true], [38, "Reply to Sam (deadline)", "inbox"], [132, "Investor call", "conflicts with dentist"], [380, "Evening run", "fitness"]];
@@ -311,12 +311,12 @@ function demoModel() {
     headline: demoAlert ? "Finance has gone quiet. Everything else is fine." : "3 things need you today. Everything else is handled.",
     feed: [["URGENT", "2 urgent replies waiting", "Sam (noon deadline) and the landlord · inbox", min(32)], ["WARN", "Calendar conflict", "Dentist 2 pm overlaps the investor call · chief-of-staff", min(14)],
       ["INFO", "3 posts scheduled for tomorrow", "Reach up 18% week on week · social", min(95)], ["TIP", "Evening run suggested", "Recovery is 78%, weather clear at 18:00 · fitness", min(180)],
-      ["INFO", "Invoice from Hosting Co", "$84.20 due in 2 days · finance", min(300)], ["LIVE", "All connectors healthy", "Gmail, Calendar, Drive, Buffer, Higgsfield", min(0)]].map(f => ({ tag: f[0], title: f[1], body: f[2], at: f[3] })),
+      ["INFO", "Invoice from Hosting Co", "$84.20 due in 2 days · finance", min(300)], ["LIVE", "All connectors healthy", "Gmail, Calendar, Drive, Buffer, Higgsfield", min(0)]].map(f => ({ tag: f[0], title: f[1], body: f[2], at: f[3], sens: /finance|invoice/i.test(f[1] + f[2]) })),
     finance: { balance: "$18,420.55", change_30d: "+$1,240.10", series: [48, 44, 50, 38, 41, 30, 34, 26, 32, 22, 28, 18, 24, 14, 20, 10].map(v => 62 - v),
       categories: [{ name: "Rent", pct: 45 }, { name: "Business", pct: 25 }, { name: "Food", pct: 15 }, { name: "Other", pct: 15 }],
       bills: [{ name: "Hosting Co", amount: "$84.20", dueMs: now + 2 * 864e5 }, { name: "Card payment", amount: "$410.00", dueMs: now + 5 * 864e5 }, { name: "Rent", amount: "$1,800.00", dueMs: now + 9 * 864e5 }] },
     vitals: { steps: 8240, steps_goal: 10000, sleep_hours: 7.2, heart_rate: 62, recovery: 78, streak: 6, src: "fitness bot · 06:50" },
-    brief: ["Priority 1: reply to Sam before noon (38 min).", "The 2 pm dentist clashes with the investor call. Suggest moving the dentist.", "3 posts go out tomorrow; 1 needs your approval.", "Finance: 2 bills due this week, cash flow on track.", "Fitness: 6 day streak, run suggested at 18:00."] };
+    brief: ["Priority 1: reply to Sam before noon (38 min).", "The 2 pm dentist clashes with the investor call. Suggest moving the dentist.", "3 posts go out tomorrow; 1 needs your approval.", "Finance: 2 bills due this week, cash flow on track.", "Fitness: 6 day streak, run suggested at 18:00."].map(t => ({ t, sens: t.startsWith("Finance") })) };
 }
 /*DEMO-END*/
 /*LIVE-START*/
@@ -328,8 +328,9 @@ async function api(path, opt = {}) {
 function liveModel(d) {
   const now = Date.now(), snaps = d.snapshots || {}, order = d.bots.map(b => b.bot);
   const note = b => { const s = snaps[b]; if (!s) return ""; return (s.tiles && s.tiles.length) ? s.tiles.slice(0, 2).map(t => t.label + " " + t.value).join(" · ") : (s.note || ""); };
-  const bots = d.bots.map((b, i) => ({ id: b.bot, state: b.last_report ? b.state : "waiting", note: note(b.bot), last: b.last_report, color: PALETTE[i % PALETTE.length], glyph: glyphFor(b.bot) }));
-  const feed = d.briefs.map(b => ({ tag: b.kind === "alert" ? "URGENT" : b.priority === "high" ? "WARN" : b.priority === "low" ? "TIP" : "INFO", title: b.title,
+  const bots = d.bots.map((b, i) => ({ id: b.bot, state: b.last_report ? b.state : "waiting", note: note(b.bot), last: b.last_report, color: PALETTE[i % PALETTE.length], glyph: glyphFor(b.bot), sens: !!(snaps[b.bot] && snaps[b.bot].finance) }));
+  const sensBots = new Set(bots.filter(b => b.sens).map(b => b.id));
+  const feed = d.briefs.map(b => ({ sens: sensBots.has(b.bot), tag: b.kind === "alert" ? "URGENT" : b.priority === "high" ? "WARN" : b.priority === "low" ? "TIP" : "INFO", title: b.title,
     body: (b.body.length > 140 ? b.body.slice(0, 140) + "…" : b.body) + " · " + b.bot, at: b.created_at }));
   const needs = d.approvals.map(a => ({ id: a.id, title: a.title, meta: a.bot + (a.detail ? " · " + a.detail.slice(0, 80) : ""), amount: a.amount, bot: a.bot }));
   // events from every bot's snapshot
@@ -354,10 +355,10 @@ function liveModel(d) {
   const headline = !bots.some(b => b.last) ? "Waiting for your bots' first reports." : parts.length ? parts.join(" · ") + "." : "All quiet. Everything is handled.";
   const fb = order.find(b => snaps[b] && snaps[b].finance), vb = order.find(b => snaps[b] && snaps[b].vitals);
   const fin = fb ? { ...snaps[fb].finance, bills: (snaps[fb].finance.bills || []).map(x => ({ name: x.name, amount: x.amount, dueMs: Date.parse(x.due), dueText: x.due })) } : null;
-  const brief = [headline]; pr.slice(0, 3).forEach(p => brief.push("Priority: " + p));
-  needs.forEach(n => brief.push("Waiting for your approval: " + n.title)); silent.forEach(b => brief.push(b.id + " has stopped reporting (last: " + ago(b.last) + " ago)."));
-  if (fin) fin.bills.filter(x => !isNaN(x.dueMs) && x.dueMs - now < 3 * 864e5).forEach(x => brief.push("Bill due soon: " + x.name + " " + x.amount));
-  if (vb && snaps[vb].vitals.streak) brief.push("Streak: " + snaps[vb].vitals.streak + " days.");
+  const brief = [{ t: headline }]; pr.slice(0, 3).forEach(p => brief.push({ t: "Priority: " + p }));
+  needs.forEach(n => brief.push({ t: "Waiting for your approval: " + n.title, sens: sensBots.has(n.bot) })); silent.forEach(b => brief.push({ t: b.id + " has stopped reporting (last: " + ago(b.last) + " ago)." }));
+  if (fin) fin.bills.filter(x => !isNaN(x.dueMs) && x.dueMs - now < 3 * 864e5).forEach(x => brief.push({ t: "Bill due soon: " + x.name + " " + x.amount, sens: true }));
+  if (vb && snaps[vb].vitals.streak) brief.push({ t: "Streak: " + snaps[vb].vitals.streak + " days." });
   const alertTxt = silent.length ? silent.map(b => b.id).join(", ") + (silent.length > 1 ? " have" : " has") + " stopped reporting · last report " + ago(silent[0].last) + " ago" : null;
   return { owner: d.owner, bots, feed, needs, timeline, heat: d.grid, finance: fin, vitals: vb ? { ...snaps[vb].vitals, src: vb + " · " + ago(snaps[vb].updated_at) + " ago" } : null,
     brief, headline, now: rn, alert: alertTxt, waitingAll: bots.length > 0 && waiting.length === bots.length, nextEv };
@@ -392,11 +393,14 @@ function renderChrome() {
 function nextCdUpdate() { const nx = LIVE ? M.nextEv : null; let ms = null;
   if (LIVE) { if (M.nextEv) ms = M.nextEv.t - Date.now(); } else { const t = (M.timeline || []).find(x => x.next); if (t && M.now) ms = M.now.due - Date.now() + (t.text.startsWith("Reply") ? 0 : (t.inMs - 38 * 60000)); }
   $("nextCd").textContent = ms != null ? "in " + span(ms) : ""; }
+const sensEl = (e, on) => { if (on) { e.classList.add("sens"); e.dataset.rev = ""; } return e; };
+const priv = () => document.body.classList.contains("priv");
+const safeNote = b => b.sens && priv() ? "hidden (privacy on)" : (b.note || b.state);
 function renderRoster() {
   const r = clear($("rosList"));
   if (!M.bots.length) r.append(el("div", "empty", "No bots configured yet."));
   M.bots.forEach(b => { const row = el("div", "rb"), g = el("div", "gl " + b.state); g.style.setProperty("--c", b.color); g.innerHTML = '<svg viewBox="0 0 24 24">' + b.glyph + "</svg>";
-    const m = el("div"); m.append(el("div", "n", b.id), el("div", "s", b.state === "silent" ? "no report for " + ago(b.last) : b.state === "waiting" ? "waiting for first report" : (b.note || "last report " + ago(b.last) + " ago")));
+    const m = el("div"); m.append(el("div", "n", b.id), sensEl(el("div", "s", b.state === "silent" ? "no report for " + ago(b.last) : b.state === "waiting" ? "waiting for first report" : (b.note || "last report " + ago(b.last) + " ago")), b.sens && b.state !== "silent" && b.state !== "waiting"));
     row.append(g, m, el("div", "k " + b.state, b.state)); r.append(row); });
   $("rosSub").textContent = M.bots.filter(b => b.state === "working" || b.state === "idle").length + "/" + M.bots.length + " online";
 }
@@ -421,7 +425,7 @@ function tickNow() { const due = +$("nowCd").dataset.due; if (!due) { $("nowCd")
   $("nowCd").textContent = s ? p(Math.floor(s / 3600)) + ":" + p(Math.floor(s % 3600 / 60)) + ":" + p(s % 60) : "now"; }
 function renderFeed() {
   const f = clear($("feedList")); if (!M.feed.length) f.append(el("div", "empty", "Nothing in the last 24 hours."));
-  M.feed.forEach(x => { const i = el("div", "it"); i.append(el("span", "tag " + x.tag, x.tag)); const b = el("div"); b.append(el("div", "tt", x.title), el("div", "bd", x.body)); i.append(b, el("div", "ag", ago(x.at))); f.append(i); });
+  M.feed.forEach(x => { const i = el("div", "it"); i.append(el("span", "tag " + x.tag, x.tag)); const b = el("div"); b.append(sensEl(el("div", "tt", x.title), x.sens), sensEl(el("div", "bd", x.body), x.sens)); i.append(b, el("div", "ag", ago(x.at))); f.append(i); });
 }
 function renderTimeline() {
   const l = clear($("tlList")); if (!M.timeline.length) l.append(el("div", "empty", "No events reported yet."));
@@ -510,9 +514,10 @@ let run = !reduce; function loop(ts) { if (run) { draw(ts); requestAnimationFram
 document.addEventListener("visibilitychange", () => { run = !reduce && !document.hidden; if (run) requestAnimationFrame(loop);
   /*LIVE-START*/ if (!document.hidden) refresh(); /*LIVE-END*/ });
 cv.addEventListener("pointermove", e => { const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; hover = pos.findIndex(p => p && Math.hypot(p.x - x, p.y - y) < p.r);
-  const tip = $("tip"); if (hover >= 0) { tip.textContent = OB[hover].id + " · " + (OB[hover].note || OB[hover].state); tip.style.left = Math.min(x + 12, W - 190) + "px"; tip.style.top = (y - 30) + "px"; tip.style.opacity = 1; cv.style.cursor = "pointer"; } else { tip.style.opacity = 0; cv.style.cursor = "default"; } });
+  const tip = $("tip"); if (hover >= 0) { tip.textContent = OB[hover].id + " · " + safeNote(OB[hover]); tip.style.left = Math.min(x + 12, W - 190) + "px"; tip.style.top = (y - 30) + "px"; tip.style.opacity = 1; cv.style.cursor = "pointer"; } else { tip.style.opacity = 0; cv.style.cursor = "default"; } });
 cv.addEventListener("pointerleave", () => { hover = -1; $("tip").style.opacity = 0; });
 cv.addEventListener("click", () => { if (hover >= 0) { const b = OB[hover]; toast(b.id + " · " + (b.state === "waiting" ? "waiting for first report" : "last report " + ago(b.last) + " ago")); } });
+$("privBtn").addEventListener("click", () => { if (M) renderAll(); });
 new ResizeObserver(() => sizeCanvas()).observe($("cw"));
 
 /* ================= actions ================= */
@@ -552,7 +557,7 @@ function palRender() { const q = $("palIn").value, ql = q.toLowerCase(), l = cle
   shown.forEach((c, i) => { const d = el("div", "pi" + (i === sel ? " sel" : ""), c.label); d.append(el("span", null, c.tag)); d.onclick = () => { closeAll(); c.run(); }; l.append(d); }); }
 function openPal() { $("pal").classList.add("open"); $("palIn").value = ""; sel = 0; palRender(); setTimeout(() => $("palIn").focus(), 30); }
 function closeAll() { document.querySelectorAll(".ov").forEach(o => o.classList.remove("open")); }
-function openBrief() { const l = clear($("briefList")); (M.brief.length ? M.brief : ["Nothing to report yet."]).forEach(x => l.append(el("li", null, x))); $("brief").classList.add("open"); }
+function openBrief() { const l = clear($("briefList")); (M.brief.length ? M.brief : [{ t: "Nothing to report yet." }]).forEach(x => l.append(el("li", null, x.sens && priv() ? "(finance detail hidden: privacy is on)" : x.t))); $("brief").classList.add("open"); }
 $("palBtn").onclick = openPal; $("ask").onclick = openPal; $("exec").onclick = openBrief; $("briefClose").onclick = closeAll;
 document.querySelectorAll(".ov").forEach(o => o.addEventListener("click", e => { if (e.target === o) closeAll(); }));
 $("palIn").addEventListener("input", () => { sel = 0; palRender(); });

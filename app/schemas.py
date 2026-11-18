@@ -31,6 +31,31 @@ class Vitals(_Strict):
     heart_rate: int | None = Field(default=None, ge=20, le=250)
     recovery: int | None = Field(default=None, ge=0, le=100)
     streak: int | None = Field(default=None, ge=0, le=100000)
+    calories: int | None = Field(default=None, ge=0, le=20000)
+    calories_goal: int | None = Field(default=None, ge=0, le=20000)
+    protein_g: float | None = Field(default=None, ge=0, le=2000)
+    carbs_g: float | None = Field(default=None, ge=0, le=3000)
+    fat_g: float | None = Field(default=None, ge=0, le=2000)
+    water_ml: int | None = Field(default=None, ge=0, le=20000)
+    weight_kg: float | None = Field(default=None, ge=0, le=700)
+
+
+class Row(_Strict):
+    label: str = Field(max_length=60)
+    value: str = Field(max_length=80)
+    note: str = Field(default="", max_length=120)
+
+
+class Section(_Strict):
+    """A titled table of rows: any bot can send any structured data without new dashboard code (macros, supplements, orders...)."""
+    title: str = Field(max_length=60)
+    rows: list[Row] = Field(default_factory=list, max_length=30)
+
+
+class LogEntry(_Strict):
+    at: str = Field(max_length=40)           # "14:00", a date, or an ISO time
+    title: str = Field(max_length=200)       # "Upper body, 52 min"
+    note: str = Field(default="", max_length=300)
 
 
 class Category(_Strict):
@@ -59,3 +84,5 @@ class SnapshotIn(_Strict):
     priorities: list[str] = Field(default_factory=list, max_length=5)
     vitals: Vitals | None = None
     finance: Finance | None = None
+    sections: list[Section] = Field(default_factory=list, max_length=8)
+    log: list[LogEntry] = Field(default_factory=list, max_length=50)

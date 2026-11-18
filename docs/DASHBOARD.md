@@ -10,6 +10,7 @@
 | **Speaker** (`S`) | Interface sounds. Off by default. Synthesised in the browser (no audio files), soft, and silent until you turn them on. |
 | **Expand** (`A`) | Ambient mode: the wall display (below). |
 | **Search or command** (`Ctrl/Cmd K`, `/`) | Command palette. In the live dashboard, `task <bot> <what to do>` gives a bot a task. |
+| **A bot** (roster row, 3D satellite, or palette: `Open Atlas`) | The detail drawer: everything that bot has sent, with 30 days of trends. `Esc`, the X or the back button closes it. Sensitive bots blur with privacy on. What each bot can show is in [`DATA_CONTRACT.md`](DATA_CONTRACT.md). |
 | **Executive briefing** | Today in five lines. Sensitive items are hidden when privacy is on. |
 | **Approve / Decline** | Only a logged-in dashboard session can decide an approval. The bot is woken with the answer. |
 

@@ -92,6 +92,9 @@ const Auth = {
   ok() { const was = this.needed; this.needed = false; $("login").style.display = "none"; if (was) bus.emit("auth:ok"); },
 };
 
+const Source = {
+  bot: id => api("/api/bots/" + encodeURIComponent(id)).catch(e => { if (e.message === "auth") Auth.required(); throw e; }),
+};
 const Actions = {
   async decide(a, decision) {
     const verb = decision === "approve" ? "Approved" : "Declined";

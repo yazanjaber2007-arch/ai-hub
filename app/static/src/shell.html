@@ -109,6 +109,18 @@
 <div class="ov" id="pal" role="dialog" aria-modal="true" aria-label="Command palette"><div class="box"><input id="palIn" placeholder="Type a command…" autocomplete="off" spellcheck="false" aria-label="Command"><div class="pl" id="palList" role="listbox"></div></div></div>
 <div class="ov" id="brief" role="dialog" aria-modal="true" aria-label="Executive briefing"><div class="box mod"><h2>Executive briefing</h2><ul id="briefList"></ul><button class="btn" id="briefClose" type="button">Close</button></div></div>
 <!--LIVE--><div id="login" role="dialog" aria-modal="true" aria-label="Sign in"><form id="loginForm"><div class="login-mark" aria-hidden="true"></div><h2>Authenticate</h2><input id="pw" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password"><button class="btn btn-primary" type="submit">Sign in</button><div class="msg" id="loginMsg" role="alert"></div></form></div><!--/LIVE-->
+<div class="ov drawer" id="detail" role="dialog" aria-modal="true" aria-labelledby="dtName">
+  <div class="box sheet">
+    <header class="dt-head">
+      <div class="dt-glyph" id="dtGlyph" aria-hidden="true"></div>
+      <div class="dt-id"><h2 id="dtName"></h2><div class="dt-role" id="dtRole"></div></div>
+      <span class="dt-state" id="dtState"></span>
+      <button class="ibtn" id="dtClose" type="button" aria-label="Close details" title="Close  (Esc)"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="dt-meta" id="dtMeta"></div>
+    <div class="dt-body" id="dtBody"></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <div id="pool" hidden>

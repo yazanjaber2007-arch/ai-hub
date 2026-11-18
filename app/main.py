@@ -175,6 +175,10 @@ def create_app(settings: config.Settings | None = None) -> FastAPI:
     def dash(_: auth.Principal = Depends(admin)):
         return core.dashboard()
 
+    @app.get("/api/bots/{bot}")
+    def bot_detail(bot: str, _: auth.Principal = Depends(admin)):
+        return core.bot_detail(bot)
+
     @app.get("/api/approvals")
     def approvals(status: str = "pending", _: auth.Principal = Depends(admin)):
         return core.list_approvals(status or None)

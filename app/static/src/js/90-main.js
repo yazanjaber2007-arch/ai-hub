@@ -67,7 +67,6 @@ function initControls() {
     const s = document.body.style; s.setProperty("--mx", ((e.clientX / innerWidth) * 2 - 1).toFixed(2)); s.setProperty("--my", ((e.clientY / innerHeight) * 2 - 1).toFixed(2));
   }, { passive: true });
   MQ_PHONE.addEventListener("change", () => layout()); addEventListener("resize", measure);
-  bus.on("select", id => { const b = M && M.bots.find(x => x.id === id); if (b) toast(Names.full(b.id) + " · " + (b.state === "waiting" ? "waiting for first report" : b.sens && document.body.classList.contains("priv") ? "details hidden (privacy on)" : (b.note || b.state) + " · " + agoT(b.last))); });
 }
 
 /* ---------- start-up ---------- */
@@ -110,4 +109,4 @@ function start() {
   addEventListener("pagehide", () => {});
 }
 start();
-if (IS_AUTOMATED) window.__hub = { Core, App, bus, Sound, Ambient, Boot, Perf, get M() { return M; } };   // test hook, only under automation
+if (IS_AUTOMATED) window.__hub = { Core, App, bus, Sound, Ambient, Boot, Perf, Detail, get M() { return M; } };   // test hook, only under automation

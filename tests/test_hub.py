@@ -502,6 +502,51 @@ def test_sensitive_flag_comes_from_settings(tmp_path):
     assert flags == {"chief-of-staff": False, "finance": True, "personal": True}
 
 
+def test_snapshot_accepts_macros_sections_and_a_workout_log(client2):
+    snap = {"note": "leg day", "vitals": {"steps": 9000, "calories": 2150, "calories_goal": 2400, "protein_g": 151.5, "carbs_g": 210, "fat_g": 70, "water_ml": 2400, "weight_kg": 81.2},
+            "sections": [{"title": "Supplements", "rows": [{"label": "Creatine", "value": "5 g", "note": "taken"}]}],
+            "log": [{"at": "2026-11-17", "title": "Legs, 58 min", "note": "squat 5x5 @ 120 kg"}]}
+    assert client2.post("/ingest/snapshot", json=snap, headers=bearer(COS)).status_code == 200
+    assert client2.post("/ingest/snapshot", json={"sections": [{"title": "t" * 61, "rows": []}]}, headers=bearer(COS)).status_code == 400
+    assert client2.post("/ingest/snapshot", json={"log": [{"at": "x", "title": "y", "extra": 1}]}, headers=bearer(COS)).status_code == 400
+    assert client2.post("/ingest/snapshot", json={"sections": [{"title": "s", "rows": [{"label": "a", "value": "b"}] * 31}]}, headers=bearer(COS)).status_code == 400
+
+
+def test_bot_detail_endpoint(client2):
+    assert client2.get("/api/bots/chief-of-staff").status_code == 401           # locked
+    assert client2.get("/api/bots/chief-of-staff", headers=bearer(COS)).status_code == 403  # a bot token is not enough
+    assert client2.get("/api/bots/nope", headers=bearer(ADMIN)).status_code == 400
+    client2.post("/ingest/snapshot", json=GOOD_SNAP, headers=bearer(COS))
+    client2.post("/ingest/brief", json={"title": "Morning", "body": "All good", "items": ["a", "b"]}, headers=bearer(COS))
+    client2.post("/api/tasks", json={"bot": "chief-of-staff", "title": "Check calendar"}, headers=bearer(ADMIN))
+    client2.post("/ingest/approvals", json={"title": "Send reply"}, headers=bearer(COS))
+    d = client2.get("/api/bots/chief-of-staff", headers=bearer(ADMIN)).json()
+    assert d["name"] == "Zeus" and d["role"] == "Chief of staff" and d["state"] in ("working", "idle") and d["sensitive"] is False
+    assert d["snapshot"]["vitals"]["steps"] == 8240 and d["snapshot"]["updated_at"].endswith("Z")
+    assert d["briefs"][0]["title"] == "Morning" and d["briefs"][0]["items"] == ["a", "b"]
+    assert d["tasks"][0]["title"] == "Check calendar" and d["open_tasks"] == 1
+    assert d["approvals"][0]["status"] == "pending" and len(d["grid"]["counts"]) == 30 == len(d["grid"]["dates"])
+    assert d["briefs"] and all(b["bot"] == "chief-of-staff" for b in d["briefs"])   # nothing from other bots
+    fin = client2.get("/api/bots/finance", headers=bearer(ADMIN)).json()
+    assert fin["sensitive"] is True and fin["snapshot"] is None and fin["briefs"] == []
+
+
+def test_snapshot_history_dedupes_and_draws_trends(client2):
+    from datetime import timedelta
+    from app import db
+    snap = lambda steps: {"vitals": {"steps": steps}, "tiles": [{"label": "Weight", "value": "81.2 kg"}]}
+    client2.post("/ingest/snapshot", json=snap(1000), headers=bearer(COS))
+    client2.post("/ingest/snapshot", json=snap(1000), headers=bearer(COS))        # identical: no new history row
+    with db.session() as s:
+        assert len(s.query(db.SnapshotHist).all()) == 1
+        # two earlier days, written straight to history
+        for days, steps, w in ((2, 6000, "82.0 kg"), (1, 8000, "81.6 kg")):
+            s.add(db.SnapshotHist(bot="chief-of-staff", at=db.utcnow() - timedelta(days=days), data={"vitals": {"steps": steps}, "tiles": [{"label": "Weight", "value": w}]}))
+        s.commit()
+    tr = client2.get("/api/bots/chief-of-staff", headers=bearer(ADMIN)).json()["trends"]
+    assert [v for _, v in tr["steps"]] == [6000.0, 8000.0, 1000.0] and [v for _, v in tr["Weight"]] == [82.0, 81.6, 81.2]
+
+
 def test_bots_get_greek_names_with_plain_roles(tmp_path):
     slugs = ["chief-of-staff", "inbox", "social", "fitness", "finance", "personal"]
     p = config.assign_personas(slugs)

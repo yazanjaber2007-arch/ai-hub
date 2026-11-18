@@ -56,6 +56,15 @@ class SnapshotRow(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class SnapshotHist(Base):
+    """Every distinct snapshot a bot has sent (pruned), so the bot's detail view can draw trends."""
+    __tablename__ = "snapshot_hist"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    bot: Mapped[str] = mapped_column(String(64), index=True)
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+
 class Approval(Base):
     __tablename__ = "approvals"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

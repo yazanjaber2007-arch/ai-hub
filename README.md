@@ -14,7 +14,7 @@ What each bot sends is in [`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md).
 
 | Path | What | Login |
 |---|---|---|
-| `/command` | **The Command Center**: boot sequence, 3D core, live bots, briefs, approvals, finance, vitals, timeline, wall-display mode | yes |
+| `/command` | **The Command Center**: boot sequence, 3D core, live bots, briefs, approvals, finance, vitals, timeline, per-bot detail drawer, wall-display mode | yes |
 | `/` | The original plain dashboard (kept until you retire it) | yes |
 | `/demo` | Shareable demo with sample data. `?name=Alex` personalises the greeting | no |
 | `/preview` | The same demo with developer controls | no |

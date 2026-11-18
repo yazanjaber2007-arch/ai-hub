@@ -12,7 +12,7 @@ const rememberFocus = () => { const a = document.activeElement; _returnTo = a &&
 function closeOverlays() {
   const was = $$(".ov.open").length; $$(".ov").forEach(o => o.classList.remove("open"));
   if (was && _returnTo && _returnTo.isConnected && !Ambient.active) { try { _returnTo.focus({ preventScroll: true }); } catch (e) {} }
-  _returnTo = null;
+  _returnTo = null; if (was) bus.emit("overlay:close");
 }
 function trapTab(e) {
   const box = document.querySelector(".ov.open .box"); if (!box) return false;
@@ -37,6 +37,7 @@ const Palette = (() => {
       { label: "Toggle privacy blur", tag: "privacy", run: () => $("privBtn").click() },
       { label: "Toggle interface sounds", tag: "sound", run: () => $("sndBtn").click() },
       { label: "Core: 3D hologram", tag: "display", run: () => Core.setPref("3d") },
+      ...((M && M.bots) || []).map(b => ({ label: "Open " + b.name + (b.role ? " · " + b.role : ""), tag: "details", run: () => Detail.open(b.id) })),
       { label: "Performance: Auto (recommended)", tag: "perf" + (Perf.mode === "auto" ? " · on" : ""), run: () => Perf.set("auto") },
       { label: "Performance: Battery saver", tag: "perf" + (Perf.mode === "saver" ? " · on" : ""), run: () => Perf.set("saver") },
       { label: "Performance: Full quality", tag: "perf" + (Perf.mode === "full" ? " · on" : ""), run: () => Perf.set("full") },
@@ -60,7 +61,7 @@ const Palette = (() => {
   function render() {
     const q = $("palIn").value, ql = q.toLowerCase(), list = clear($("palList"));
     shown = base().filter(c => c.label.toLowerCase().includes(ql));
-    /*LIVE-START*/ shown = liveCmds(q).concat(q.trim() ? shown : shown.slice(0, 6)); /*LIVE-END*/
+    /*LIVE-START*/ { const lc = liveCmds(q), asTask = /^task\s/i.test(q.trim()); shown = asTask ? lc.concat(shown) : (q.trim() ? shown : shown.slice(0, 6)).concat(lc); }   /* a task command leads; the tip trails, so Enter picks the first real match */ /*LIVE-END*/
     sel = clamp(sel, 0, Math.max(0, shown.length - 1));
     shown.forEach((c, i) => {
       const d = el("div", "pi" + (i === sel ? " sel" : ""), c.label); d.setAttribute("role", "option"); d.append(el("span", "", c.tag));

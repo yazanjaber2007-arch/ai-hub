@@ -2,14 +2,15 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, time, timedelta
 
 import httpx
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from . import config
-from .db import Approval, Audit, Brief, BotSeen, SnapshotRow, Synthesis, Task, session, utcnow
+from .db import Approval, Audit, Brief, BotSeen, SnapshotHist, SnapshotRow, Synthesis, Task, session, utcnow
 from .schemas import SnapshotIn
 
 KINDS = {"brief", "alert", "note"}
@@ -192,6 +193,14 @@ def post_snapshot(bot: str, data: dict) -> dict:
             row.data, row.updated_at = clean, utcnow()
         else:
             s.add(SnapshotRow(bot=bot, data=clean, updated_at=utcnow()))
+        # history for trends: only when something changed, 90 days, at most 400 rows per bot
+        last = s.scalars(select(SnapshotHist).where(SnapshotHist.bot == bot).order_by(SnapshotHist.at.desc()).limit(1)).first()
+        if not last or last.data != clean:
+            s.add(SnapshotHist(bot=bot, data=clean, at=utcnow()))
+        s.execute(delete(SnapshotHist).where(SnapshotHist.bot == bot, SnapshotHist.at < utcnow() - timedelta(days=90)))
+        keep = s.scalars(select(SnapshotHist.id).where(SnapshotHist.bot == bot).order_by(SnapshotHist.at.desc()).offset(400)).all()
+        if keep:
+            s.execute(delete(SnapshotHist).where(SnapshotHist.id.in_(keep)))
         s.commit()
     touch_bot(bot)
     audit(bot, "snapshot", bot, ",".join(sorted(clean)))
@@ -300,6 +309,61 @@ def _last_report(s, bot: str):
     snap = s.get(SnapshotRow, bot)
     times = [t for t in (b, snap.updated_at if snap else None) if t]
     return max(times) if times else None
+
+
+_NUM = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
+TREND_VITALS = ("steps", "sleep_hours", "heart_rate", "recovery", "streak", "calories", "protein_g", "carbs_g", "fat_g", "water_ml", "weight_kg")
+
+
+def _number(text) -> float | None:
+    if isinstance(text, (int, float)) and not isinstance(text, bool):
+        return float(text)
+    m = _NUM.search(str(text))
+    return float(m.group(0).replace(",", "")) if m else None
+
+
+def _trends(hist: list) -> dict:
+    """label -> [[date, value], ...] (the last value of each day) for every numeric vital and tile with at least two days."""
+    per: dict[str, dict[str, float]] = {}
+    for h in hist:
+        day = h.at.date().isoformat()
+        d = h.data or {}
+        for k in TREND_VITALS:
+            v = (d.get("vitals") or {}).get(k)
+            if v is not None:
+                per.setdefault(k, {})[day] = float(v)
+        for t in d.get("tiles") or []:
+            n = _number(t.get("value"))
+            if n is not None:
+                per.setdefault(t.get("label", ""), {})[day] = n
+    return {k: sorted([d, v] for d, v in days.items()) for k, days in per.items() if k and len(days) >= 2}
+
+
+def bot_detail(bot: str) -> dict:
+    """Everything one bot has sent: its latest state, history of briefs, tasks and approvals, 30 days of reporting and trends."""
+    bot = _check_bot(bot)
+    now = utcnow()
+    persona = config.settings.personas()[bot]
+    with session() as s:
+        snap = s.get(SnapshotRow, bot)
+        briefs = [_brief_dict(b) for b in s.scalars(select(Brief).where(Brief.bot == bot).order_by(Brief.created_at.desc()).limit(60))]
+        tasks = [_task_dict(t) for t in s.scalars(select(Task).where(Task.bot == bot).order_by(Task.created_at.desc()).limit(40))]
+        approvals = [_approval_dict(a) for a in s.scalars(select(Approval).where(Approval.bot == bot).order_by(Approval.created_at.desc()).limit(30))]
+        hist = list(s.scalars(select(SnapshotHist).where(SnapshotHist.bot == bot, SnapshotHist.at >= now - timedelta(days=30)).order_by(SnapshotHist.at)))
+        seen = s.get(BotSeen, bot)
+        last = _last_report(s, bot)
+    healthy = last is not None and now - last < timedelta(hours=config.settings.stale_hours)
+    active = seen is not None and now - seen.last_seen < timedelta(minutes=3)
+    grid = reporting_grid(30)
+    return {
+        "bot": bot, "name": persona["name"], "role": persona["role"], "sensitive": bot in config.settings.sensitive_bots,
+        "state": "silent" if not healthy else ("working" if active else "idle"),
+        "last_report": last.isoformat() + "Z" if last else None, "last_seen": seen.last_seen.isoformat() + "Z" if seen else None,
+        "open_tasks": sum(1 for t in tasks if t["status"] == "open"),
+        "snapshot": {**snap.data, "updated_at": snap.updated_at.isoformat() + "Z"} if snap else None,
+        "briefs": briefs, "tasks": tasks, "approvals": approvals, "trends": _trends(hist),
+        "grid": {"dates": grid["dates"], "counts": grid["rows"][bot]},
+    }
 
 
 def dashboard() -> dict:

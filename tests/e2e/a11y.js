@@ -24,10 +24,13 @@ let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : fail++; console.log(
   const names = await p.$$eval('#rosList .rb', rows => rows.map(r => r.querySelector('.nm').textContent + '|' + r.querySelector('.role').textContent));
   ok(names.includes('Zeus|Chief of staff') && names.includes('Hermes|Inbox') && names.includes('Apollo|Social growth'), 'roster shows god names with their roles ' + JSON.stringify(names));
   const moved = [];
-  // settle the glass-wall parallax first: the first pointer move tilts the whole column (by design), which is not the row moving
-  await (await p.$('#rosList .rb')).hover(); await p.waitForTimeout(350);
+  // The first pointer move tilts the whole column (glass-wall parallax, a .35s transition on #colL), which is not the row moving.
+  // Wait for that transition to end, not a fixed time: while the row is still sliding, Playwright's hover sees it as "not stable",
+  // retries, and on its third try scrolls it to the middle of the window (row 0 then reads ~498.6 -> 419.77).
+  const settle = () => p.evaluate(() => Promise.all(document.getElementById('colL').getAnimations().map(a => a.finished.catch(() => {}))));
+  await (await p.$('#rosList .rb')).hover(); await settle();
   for (const row of await p.$$('#rosList .rb')) {
-    const before = await row.boundingBox(); await row.hover(); await p.waitForTimeout(350);
+    const before = await row.boundingBox(); await row.hover(); await p.waitForTimeout(350); await settle();
     const after = await row.boundingBox(), pos = await row.evaluate(e => getComputedStyle(e).position);
     if (Math.abs(before.y - after.y) > 1.5 || Math.abs(before.x - after.x) > 1.5 || pos === 'absolute') moved.push(before.y + '->' + after.y + ' ' + pos);
   }

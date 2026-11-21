@@ -115,13 +115,17 @@ Do not mistake the rich demo drawer for what production shows.
 9. `tests/e2e/README.md` still lists only four scripts (ambient, a11y, core, live); `perf.js` and `detail.js` were added later and are run by `run-all.sh`.
 10. The production smoke test (12 checks: health, assets served with brotli and immutable caching, fonts, CSP, signed-out gate shows no data, demo drawer opens) lived in the session's scratch folder and is **not in the repo**. It must be recreated.
 11. Browser tests: the idle-refresh check was flaky when a bot's state changed on a time boundary (now retries over three windows). Re-using a test hub on port 8801 can break login (rate limit) and re-seed, so start from a fresh database.
-12. **Intermittent a11y failure, not root-caused (found 2026-11-21 on Windows).** `a11y.js` "hovering roster rows does not move them" fails in about 3 of 11 runs:
-    the first roster row reads `~498.6 -> 419.77` (always exactly 419.77, so it's a second layout state, not noise; position stays `static`). Seen in full
-    `run-all.sh` runs and when `a11y` runs twice on one hub; never in 4 runs of `a11y` alone on a fresh hub or in 2 instrumented runs after `ambient`
-    (those logged no `lite` class, `scrollY` 0, left-column panel sizes unchanged). Not yet ruled out: that the new pre-hover in the test plays a part
-    (0 of 3 runs before that change showed it, which is too few to tell). It may be a real UI bug (this check exists because a class clash once threw a row
-    out of the layout). A separate, understood failure is fixed: the first pointer move tilts the left column (glass-wall parallax, `--mx`), moving rows
-    about 1.56 px on Windows, just over the 1.5 px limit. The test now settles the parallax before measuring.
+12. **Fixed 2026-11-21: intermittent a11y failure was a test artifact, not a dashboard bug.** `a11y.js` "hovering roster rows does not move them" failed in
+    about 3 of 11 runs with the first roster row reading `~498.6 -> 419.77`. Cause: the row never moved in the page; **Playwright scrolled the window by 79 px**.
+    The test's pre-hover tilts the left column (glass-wall parallax: `--mx` drives `#colL rotateY`, a `.35s` transition) and then waited a fixed 350 ms,
+    so the column was often still sliding when the next `hover()` started. Playwright's hover first requires the element's box to be identical across
+    animation frames; when it isn't ("element is not stable"), it retries with forced scrolls (`block: end`, which does nothing at the top of the page, then
+    `block: center`). Two failed checks in a row put the row in the middle of the 900 px window: `450 - 61/2 ≈ 419.77`, which is why the value never varied.
+    Evidence: with no pause after the pre-hover, 3 of 3 runs failed with exactly `497.48 -> 419.77` and two "element is not stable" lines in the
+    `DEBUG=pw:api` log; with the old 350 ms pause, 4 of 6 runs still logged a "not stable" retry (one retry is harmless, two make the failure).
+    Fix: the test now waits for `#colL`'s transition to finish (`getAnimations()` / `finished`) after the pre-hover and after each hover, instead of a fixed time.
+    After the fix: 0 "not stable" lines in 6 logged runs, and 5 full `run-all.sh` runs in a row at 149/149. The earlier link to running after `ambient` was
+    timing noise (17 runs after `ambient` without the fix, including under full CPU load, did not fail). The parallax itself is by design and unchanged.
 
 ## 7. Next steps, in order
 
@@ -164,7 +168,7 @@ Clone: `C:\Users\Owner1\Projects\ai-hub`. Windows 11, Git Bash + PowerShell. Con
   downloaded (`%LOCALAPPDATA%\ms-playwright\chromium-1252`). Run from Git Bash:
   `NODE_PATH="$(cygpath -m "$(npm root -g)")/@playwright/cli/node_modules" PYTHONUTF8=1 PYTHON=.venv/Scripts/python.exe bash tests/e2e/run-all.sh`.
   `run-all.sh` now accepts `PYTHON` and converts its temp path with `cygpath` (Windows Python can't open `/tmp/...`).
-  Result on 2026-11-21: ambient 26, core 16, perf 11, live 25, detail 44 all pass every time; a11y 27/27 in some runs and 26/27 in others (known issue 12).
+  Result on 2026-11-21: ambient 26, core 16, perf 11, live 25, detail 44 all pass every time; a11y was 26/27 in some runs until known issue 12 was fixed; since then 5 full runs in a row at 149/149.
   If a run leaves the hub on port 8801 running, stop it: `netstat -ano | grep ":8801 .*LISTEN"`, then `taskkill //PID <pid> //F`.
 - **Not available here:** no Railway token or Railway CLI (so no deploys from this PC; ask the owner), no `gh` CLI. The real-device review (real GPU) is
   possible on this PC, but only the owner can judge it on their screen.

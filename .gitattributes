@@ -1,0 +1,7 @@
+# Keep Unix line endings in every checkout, including Windows (Git for Windows sets core.autocrlf=true).
+# Without this, app/static/assets/hologram.js gets CRLF on Windows and no longer matches its precompressed
+# .gz/.br copies (test_bundle_is_served_precompressed fails), and shell scripts break in Git Bash.
+* text=auto eol=lf
+*.woff2 binary
+*.br binary
+*.gz binary

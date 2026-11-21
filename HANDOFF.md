@@ -2,6 +2,7 @@
 
 Written 2026-11-21 at the end of a long session, so a new Claude session can continue without that chat.
 Code state when this was written: commit `468fa78` ("Add per-bot detail drawer…"), deployed to production and verified on 2026-11-18.
+**Updated 2026-11-21** by a local session on the owner's Windows PC: see section 9 (local setup) and the status notes in section 7.
 
 How to read this: **Confirmed** means I saw it happen in this session (a test, a deploy, a screenshot or message from the owner).
 **Guess** and **Unverified** mark things I inferred or could not check. This repo is **public**, so personal details are left out on purpose.
@@ -114,12 +115,22 @@ Do not mistake the rich demo drawer for what production shows.
 9. `tests/e2e/README.md` still lists only four scripts (ambient, a11y, core, live); `perf.js` and `detail.js` were added later and are run by `run-all.sh`.
 10. The production smoke test (12 checks: health, assets served with brotli and immutable caching, fonts, CSP, signed-out gate shows no data, demo drawer opens) lived in the session's scratch folder and is **not in the repo**. It must be recreated.
 11. Browser tests: the idle-refresh check was flaky when a bot's state changed on a time boundary (now retries over three windows). Re-using a test hub on port 8801 can break login (rate limit) and re-seed, so start from a fresh database.
+12. **Intermittent a11y failure, not root-caused (found 2026-11-21 on Windows).** `a11y.js` "hovering roster rows does not move them" fails in about 3 of 11 runs:
+    the first roster row reads `~498.6 -> 419.77` (always exactly 419.77, so it's a second layout state, not noise; position stays `static`). Seen in full
+    `run-all.sh` runs and when `a11y` runs twice on one hub; never in 4 runs of `a11y` alone on a fresh hub or in 2 instrumented runs after `ambient`
+    (those logged no `lite` class, `scrollY` 0, left-column panel sizes unchanged). Not yet ruled out: that the new pre-hover in the test plays a part
+    (0 of 3 runs before that change showed it, which is too few to tell). It may be a real UI bug (this check exists because a class clash once threw a row
+    out of the layout). A separate, understood failure is fixed: the first pointer move tilts the left column (glass-wall parallax, `--mx`), moving rows
+    about 1.56 px on Windows, just over the 1.5 px limit. The test now settles the parallax before measuring.
 
 ## 7. Next steps, in order
 
 1. **Check the live site with the owner.** Sign in, confirm the five bots show sensible states, confirm `SENSITIVE_BOTS` includes `personal`, and ask for feedback from the real-device review. Fix whatever they report first.
+   *Status 2026-11-21:* checked from outside: `/health` 200, `/api/dashboard` 401 signed out, `/command` shows only the sign-in box, `/demo` loads with no console errors and its drawer opens, the versioned bundle is served `br` + `immutable`.
+   **Waiting on the owner:** signing in (in the Claude app's browser pane or their own browser). Once signed in, the bot states and the `sensitive` flag per bot can be read from the page (`/api/dashboard` returns `sensitive: true/false` per bot), so `SENSITIVE_BOTS` can be confirmed without opening Railway.
 2. **Fill the drawer with real data.** Walk the owner through pasting the fitness lines (bottom of `docs/DATA_CONTRACT.md`). Then decide per bot what useful `sections`/`log` rows it can send (workouts, top posts, accounts, open items). Test each with a snapshot post.
 3. **Housekeeping:** revoke the Railway deploy token when deploys are done, make the repo private, check Railway credit, consider `SESSION_HOURS=720` for the wall display.
+   *Status 2026-11-21:* **waiting on the owner**, walked through one click at a time in the local session. Note: once the cloud deploy token is revoked, no Claude session can deploy until the owner creates a new token (or deploys from the Railway dashboard / auto-deploy on push).
 4. **Phone-app feel:** web app manifest, home-screen icon, standalone launch, safe-area polish. Notifications are harder (iOS web push) and need a decision. Not started.
 5. **Connect the remaining bots**, one at a time, in the order the owner chooses (Inbox Manager first is a guess, based on what they said they wanted to watch).
 6. **Phase 2, the owner's stated next goal after cosmetics:** (a) live connectors for Gmail, calendar and the bank; (b) a Claude model behind the text box; (c) "full information" views per source (whole inbox for personal, full health data for fitness). Before building, get answers to two open questions: is a **capped-budget API key** acceptable, and should **Gmail connect directly or only through the bots**. Keep my default: read-only bank, nothing moves money, every send/pay/post waits for approval in "Needs you".
@@ -130,3 +141,24 @@ Do not mistake the rich demo drawer for what production shows.
 - Not a developer. Give exact click-by-click steps, one bot or one step at a time, and say what they should see. Never ask them to paste a secret in chat; secrets go into masked fields or Railway variables.
 - For cosmetic work they asked for autonomy: do it, review at the end, don't interrupt for small decisions. For anything that spends money, connects a new account, or sends/posts on their behalf, ask first.
 - They like to see a preview before a big build, and they react well to screenshots.
+
+## 9. Local setup on the owner's Windows PC (added 2026-11-21)
+
+Clone: `C:\Users\Owner1\Projects\ai-hub`. Windows 11, Git Bash + PowerShell. Confirmed in that session:
+
+- **Python 3.12.10** (not 3.13; there is no `python3` command, only `python`/`py`, and `python3` opens the Microsoft Store). Venv at `.venv`
+  (git-ignored). **pytest: 77 passed** on 3.12 after the line-ending fix below.
+- **Line endings:** Git for Windows sets `core.autocrlf=true`, which gave every file CRLF and broke `test_bundle_is_served_precompressed`
+  (`hologram.js` no longer matched its `.gz`). Fixed with `.gitattributes` (`eol=lf`), commit `c2109bc`. No file content changed.
+- **Installing `mcp` through the Claude Code sandbox proxy fails** (`ChunkedEncodingError` on `https://pypi.org/simple/mcp/`; the proxy truncates that large page).
+  Workaround: install the wheel by URL (from `https://pypi.org/pypi/mcp/json`), then `pip install -r requirements-dev.txt`. Installed: `mcp 1.30.0`,
+  fastapi 0.165, SQLAlchemy 2.1, pydantic 2.14, anthropic 2.12. A normal terminal outside the sandbox probably doesn't have this problem (**guess**).
+- **Browser tests:** no global `playwright` package, but the global `@playwright/cli` bundles `playwright` 1.65, which matches the Chromium already
+  downloaded (`%LOCALAPPDATA%\ms-playwright\chromium-1252`). Run from Git Bash:
+  `NODE_PATH="$(cygpath -m "$(npm root -g)")/@playwright/cli/node_modules" PYTHONUTF8=1 PYTHON=.venv/Scripts/python.exe bash tests/e2e/run-all.sh`.
+  `run-all.sh` now accepts `PYTHON` and converts its temp path with `cygpath` (Windows Python can't open `/tmp/...`).
+  Result on 2026-11-21: ambient 26, core 16, perf 11, live 25, detail 44 all pass every time; a11y 27/27 in some runs and 26/27 in others (known issue 12).
+  If a run leaves the hub on port 8801 running, stop it: `netstat -ano | grep ":8801 .*LISTEN"`, then `taskkill //PID <pid> //F`.
+- **Not available here:** no Railway token or Railway CLI (so no deploys from this PC; ask the owner), no `gh` CLI. The real-device review (real GPU) is
+  possible on this PC, but only the owner can judge it on their screen.
+- Git author for commits from this PC is set per repo to `Claude <noreply@anthropic.com>` (same as all earlier commits; keeps personal email out of the public repo).

@@ -3,12 +3,16 @@
 # seeds it, runs the Playwright scripts in this folder, and stops the hub.
 #
 #   one-time:  npm install -g playwright && npx playwright install chromium
+#   Windows (Git Bash): PYTHON=.venv/Scripts/python.exe bash tests/e2e/run-all.sh  (see HANDOFF.md, local setup)
 #   run:       bash tests/e2e/run-all.sh
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 PORT="${PORT:-8801}"
+PY="${PYTHON:-python3}"   # on Windows: PYTHON=.venv/Scripts/python.exe
 WORK="$(mktemp -d)"
+# Git Bash on Windows: hand Windows Python a path it can open (C:/... instead of /tmp/...).
+if command -v cygpath >/dev/null 2>&1; then WORK="$(cygpath -m "$WORK")"; fi
 export DATABASE_URL="sqlite:///$WORK/hub.db"
 export ADMIN_TOKEN="test-admin-token-0123456789abcdef"
 export SESSION_SECRET="test-session-secret-0123456789ab"
@@ -19,11 +23,11 @@ export OWNER_NAME="Mr. Stark"
 export BOT_TOKENS='{"chief-of-staff":"tok-chief-of-staff-0123456789ab","inbox":"tok-inbox-0123456789abcdef0123","social":"tok-social-0123456789abcdef01","fitness":"tok-fitness-0123456789abcdef0","finance":"tok-finance-0123456789abcdef0"}'
 export HUB="http://127.0.0.1:$PORT"
 
-python3 -m uvicorn app.main:app_factory --factory --port "$PORT" --log-level warning &
+"$PY" -m uvicorn app.main:app_factory --factory --port "$PORT" --log-level warning &
 HUB_PID=$!
 trap 'kill "$HUB_PID" 2>/dev/null || true' EXIT
 for _ in $(seq 1 40); do curl -sf "$HUB/health" >/dev/null && break; sleep 0.5; done
-python3 tests/e2e/seed.py
+"$PY" tests/e2e/seed.py
 
 status=0
 for t in ambient a11y core perf live detail; do

@@ -38,6 +38,8 @@ export BOT_TOKENS='{"chief-of-staff":"<24+ random chars>","fitness":"<24+ random
 python3 -m uvicorn app.main:app_factory --factory --port 8801
 ```
 
+On the owner's Windows PC (Python 3.12, Git Bash, no `python3`), see `HANDOFF.md` section 9 for the venv, the `mcp` install workaround and how to run the browser tests.
+
 Open `http://localhost:8801/demo` (no login) or `/command` (log in with `DASHBOARD_PASSWORD`). Use throwaway values; never reuse production secrets.
 `*.db` is git-ignored. `HUB_DEV=1` rebuilds the page when a source file's mtime changes (`touch` files after moving them); Python route changes need a server restart.
 Rebuild the 3D bundle after editing `app/static/src/hologram/`: `cd tools/assets && npm install && npm run build`, then commit the outputs in `app/static/assets/`

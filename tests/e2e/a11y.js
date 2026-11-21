@@ -24,6 +24,8 @@ let pass = 0, fail = 0; const ok = (c, m) => { c ? pass++ : fail++; console.log(
   const names = await p.$$eval('#rosList .rb', rows => rows.map(r => r.querySelector('.nm').textContent + '|' + r.querySelector('.role').textContent));
   ok(names.includes('Zeus|Chief of staff') && names.includes('Hermes|Inbox') && names.includes('Apollo|Social growth'), 'roster shows god names with their roles ' + JSON.stringify(names));
   const moved = [];
+  // settle the glass-wall parallax first: the first pointer move tilts the whole column (by design), which is not the row moving
+  await (await p.$('#rosList .rb')).hover(); await p.waitForTimeout(350);
   for (const row of await p.$$('#rosList .rb')) {
     const before = await row.boundingBox(); await row.hover(); await p.waitForTimeout(350);
     const after = await row.boundingBox(), pos = await row.evaluate(e => getComputedStyle(e).position);

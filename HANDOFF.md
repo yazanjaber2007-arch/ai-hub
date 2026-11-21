@@ -136,6 +136,10 @@ Do not mistake the rich demo drawer for what production shows.
    - **Midas (`finance`), Atlas (`fitness`) and Apollo (`social`) are `silent`: no report since 2026-11-17, all within 15 minutes that afternoon** (the setup-day test posts).
      So section 4's "reporting" was only true for the setup test; their scheduled routines are not reaching the hub. The hub does not log failed bot auth,
      so the cause must be checked in Grok Bot (each routine's run history: does the hub step run, and what does the HTTP call return?).
+     Grok Bot is app-only (no web version), so a Claude session can't read it. **Diagnostic tasks sent 2026-11-21 ~15:00 UTC** from the owner's
+     dashboard session: task #3 (fitness), #4 (finance), #5 (social), all titled "Hub check: report your last run", asking for the last run time, whether
+     HUB REPORTING ran, and each hub call's HTTP status. **Next session:** check them (`GET /api/dashboard` when signed in, or the Feed/drawer). Done =
+     the bot's hub connection works; still open after its next scheduled run = the bot never reaches the hub, so open its routine in the app with the owner.
    - **`personal` is not in `SENSITIVE_BOTS`** (`sensitive: false`), so Athena's bank-related items are not blurred by the privacy toggle. **Owner's decision (2026-11-21): leave it.** Athena does not need to be sensitive; no Railway change.
 2. **Fill the drawer with real data.** Walk the owner through pasting the fitness lines (bottom of `docs/DATA_CONTRACT.md`). Then decide per bot what useful `sections`/`log` rows it can send (workouts, top posts, accounts, open items). Test each with a snapshot post.
 3. **Housekeeping:** revoke the Railway deploy token when deploys are done, make the repo private, check Railway credit, consider `SESSION_HOURS=720` for the wall display.
